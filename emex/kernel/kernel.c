@@ -1,0 +1,415 @@
+#include <kernel/include/assembly.h>
+#include <kernel/include/reqs.h>
+#include <kernel/include/logo.h>
+#include <kernel/graph/theme.h>
+#include <kernel/communication/serial.h>
+
+#include <kernel/data/images/bmp.h>
+//int init_boot_log = -1; // boot logs
+
+#include <drivers/drivers.h>
+
+// configuration files
+#include <config/user.h>
+#include <config/system.h>
+#include <config/user_config.h>
+
+// System services
+#include <kernel/kernelslot/slot.h>
+#include <kernel/inits/limine/cmd.h>
+#include <kernel/services/installer/install.h>
+
+
+// CPU
+#include <kernel/cpu/cpu.h>
+#include <kernel/cpu/acpi/acpi.h>
+#include <kernel/pci/pci.h>
+#if X64 == 1
+    #include <kernel/arch/x86_64/gdt/gdt.h>
+    #include <kernel/arch/x86_64/idt/idt.h>
+    #include <kernel/arch/x86_64/exceptions/panic.h>
+    #include <kernel/arch/x86_64/exceptions/timer.h>
+    #include <kernel/arch/x86_64/syscalls/syscall_init.h>
+#elif RISCV == 1
+    #include <kernel/arch/riscv/tables/trap.h> // trap Table / exception Table
+#elif ARM64 == 1
+    #include <kernel/arch/arm64/exception/vectab.h> // vector table
+    #include <kernel/arch/arm64/syscalls/syscall_init.h>
+#endif
+
+//Devices
+#include <kernel/devices/null/null.h>
+#include <kernel/devices/zero/zero.h>
+#include <kernel/devices/disks/hdd0.h>
+#include <kernel/devices/fb0/fb0.h>
+#include <kernel/devices/input/kbd.h>
+#include <kernel/devices/input/mouse0.h>
+#include <kernel/devices/net/eth0.h>
+#include <kernel/devices/tty/tty0.h>
+#include <kernel/devices/tty/tty.h>
+#include <kernel/devices/tty/tty1.h>
+#include <kernel/devices/random/urandom.h>
+#include <kernel/devices/random/random.h>
+
+
+// usermode stuff
+#include <kernel/user/user.h>
+// executables
+#include <kernel/packages/elf/loader.h>
+#include <kernel/packages/cpio/cpio.h>
+#include <kernel/packages/emex/emex.h>
+#include <kernel/packages/gz/gzip.h>
+
+
+// Memory
+#include <kernel/mem/lib/main.h>
+#include <kernel/mem/meminclude.h>
+#include <kernel/mem/memlog.h>
+klime_t *klime = NULL;
+#if ENABLE_GLIME
+    glime_t *glime = NULL;
+#endif
+#if ENABLE_ULIME
+    #include <kernel/proc/scheduler.h>
+    #include <kernel/proc/proc_manager.h>
+    #include <kernel/kernel_processes/kernel/gen.h>
+    #include <kernel/kernel_processes/loader.h>
+    #include <kernel/kernel_processes/bootscreen/boot.h>
+    #include <kernel/kernel_processes/fm/fm.h>
+    #include <kernel/multitasking/multitasking.h>
+    #include <kernel/multitasking/ipc/ipc.h>
+    scheduler_t *scheduler = NULL;
+    #define SCHEDQUANT 1
+    proc_manager_t *proc_mgr = NULL;
+    ulime_t *ulime = NULL;
+    mt_t *mt = NULL;
+#endif
+
+//vFS & fs & disk
+#include <kernel/file_systems/vfs/vfs.h>
+#include <kernel/inits/fs/init.h>
+#include <kernel/module/module.h>
+#include <kernel/inits/initrd/initrd.h>
+#if ENABLE_FAT32
+    #include <kernel/file_systems/fat32/fat32.h> // finally fat32!
+    // interface
+    #include <kernel/interface/partition.h>
+    #include <kernel/interface/mbr.h>
+    #include <config/disk.h>
+#endif
+#if ENABLE_ATA
+    #include <drivers/storage/ata/disk.h>
+#endif
+#include <drivers/storage/ahci/ahci.h>
+
+
+// limine modules
+#include <kernel/modules/limine.h>
+#include <kernel/inits/init.h>
+#include <kernel/kernel.h>
+#include <kernel/mem/radix/radix.h>
+
+kglobal_t kglobal;
+
+void _start(void)
+{
+    d_boot_screen: { // Initializing Boot screen
+        theme_init();
+        setcontext(THEME_BOOTUP); // gets loaded over sbootup_theme until, sbootup == FLU
+        sbootup_theme(THEME_STD);
+        //sconsole_theme(THEME_FLU);
+        spanic_theme(THEME_STD);
+
+        // Temporaly before switchin to glime_t
+        // emexOS start
+        // Ensure that Limine base revision is supported and that we have a framebuffer
+        if (framebuffer_request.response == NULL ||
+            framebuffer_request.response->framebuffer_count < 1)
+        {
+            printf("no response");
+            hcf(); // enable text mode
+        }
+        // Initialize framebuffer graphics
+        struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
+        {
+	        graphics_init(fb);
+	        kproc_loader_init();
+	        fm_init();
+			init_bootscreen();
+	        cmd_init(); //cmdline limine
+        }
+        log("::", "finished loading essr\n", _d); // emex system start recources
+
+        font_scale = 1;
+
+        #if BOOTUP_VISUALS == 1 // verify screenmode
+            log("[BOOT]", "BOOTUP_VISUALS == 1\n", warning);
+        #else
+            log("[BOOT]", "BOOTUP_VISUALS == 0\n", warning);
+        #endif
+
+        BOOTUP_PRINT("\n\n ========================\n", white());
+        BOOTUP_PRINT(" =  Welcome to ", white());
+        BOOTUP_PRINT("emexOS", cyan());
+        BOOTUP_PRINT("!  =\n", white());
+        BOOTUP_PRINT(" ========================\n\n", white());
+
+        //actually not needed but maybe later (e.g. for testing themes)
+        //draw_rect(10, 10, fb_width - 20, fb_height - 20, blue());
+    }
+
+    char buf[512]; //for all string operations
+    #if ENABLE_ULIME
+        //ulime_t *ulime = NULL;
+        //scheduler_t *scheduler = NULL;
+        //proc_manager_t *proc_mgr = NULL;
+        scheduler = scheduler_init(ulime, 10);  // 10 tick quantum
+        proc_mgr = proc_mng_init(ulime);
+    #endif
+
+    memory_ss: { // MADE BY @TSARAKI (github)
+
+        cpu_detect();
+        #if X64 == 1
+            gdt_init();
+            idt_init();
+        #endif
+
+        log("[MEM]", "Initializing memory management\n", d);
+        // Initialize mem
+        physmem_init(memmap_request.response, hhdm_request.response);
+        paging_init(hhdm_request.response);
+
+        map_region_alloc(hhdm_request.response, HEAP_START, HEAP_SIZE);
+
+        // kernel lifetime
+        klime_t *klime = klime_init((u64 *)HEAP_START, HEAP_SIZE);
+        kglobal.klime = klime;
+
+        if (!framebuffer_request.response) {
+            panic("Cant initialize glime limine response NULL");
+        }
+
+        if (framebuffer_request.response->framebuffer_count < 1) {
+            panic("Cant initialize glime limine framebuffer_count 0");
+        }
+
+        #if ENABLE_GLIME
+            limine_framebuffer_t *fb = framebuffer_request.response->framebuffers[0];
+
+            glime_response_t glres;
+            glres.start_framebuffer = (u64 *)fb->address;
+            glres.width  = (u64)fb->width;
+            glres.height = (u64)fb->height;
+            glres.pitch  = (u64)fb->pitch;
+
+            map_region_alloc(hhdm_request.response, GRAPHICS_START, GRAPHICS_SIZE);
+            glime_t *glime = glime_init(&glres, (u64 *)GRAPHICS_START, GRAPHICS_SIZE);
+        #else
+            log("[GLIME]", "skipped (hardware compatibility)\n", warning);
+        #endif
+
+        #if ENABLE_ULIME
+            u64 phys_ulime = map_region_alloc(hhdm_request.response, ULIME_START, ULIME_META_SIZE);
+        #if ENABLE_GLIME
+            ulime = ulime_init(hhdm_request.response, klime, (void*)glime, phys_ulime);
+        #else
+            ulime = ulime_init(hhdm_request.response, klime, NULL, phys_ulime);
+        #endif
+        if (!ulime) {
+            BOOTUP_PRINTF("Error: ulime is not initialized");
+            panic("Error: ulime is not initialized");
+        }
+        #else
+            log("[ULIME]", "skipped (hardware compatibility)\n", warning);
+        #endif
+        #if ENABLE_ULIME
+            if (ulime) {
+                scheduler = scheduler_init(ulime, SCHEDQUANT);
+                proc_mgr = proc_mng_init(ulime);
+
+                mt = (mt_t*)klime_create(ulime->klime, sizeof(mt_t));
+                if (mt) {
+                    mt_init(mt, scheduler, ulime);
+                    //log("[MT]", "multitasking initialized\n", d);
+                    //ipc_init();
+                    //ipc_test();
+                }
+
+                if (scheduler) {
+                    char buf[32];
+                    str_append_uint(buf, SCHEDQUANT);
+                    log("[SCHED]", "initialized quantum == ", d);
+                    BOOTUP_PRINT(buf, white());
+                    BOOTUP_PRINT("\n", white());
+                }
+                if (proc_mgr) {
+                    log("[PROCMGR]", "initialized\n", d);
+                }
+
+                init_ipc:
+            	{
+	                ipc_messages_init();
+					log("[IPC_MESSAGES]", "initialized\n", d);
+	                ipc_shm_init();
+					log("[IPC_SHM]", "initialized\n", d);
+	                //ipc_test();
+                };
+
+                syscall_arch_init(); // SYSCALL/SYSRET
+                _init_syscalls_table(ulime);
+            }
+        #endif
+
+        init_acpi(); // Init ACPI
+
+        u32 freq = 1000;
+        timer_init(freq);
+        BOOTUP_PRINT_INT(freq, white());
+        BOOTUP_PRINT(" 1ms tick)\n", white());
+        timer_set_boot_time(); //for uptime command
+
+        pci_init();
+        ahci_init();
+        //pci will get really useful with xhci/other usb
+
+        fs_system_init(klime);
+
+        //BOOTUP_PRINT("\n", GFX_WHITE);
+    }
+
+    kernel_slot_ss: {
+        dualslotvalidating();
+
+    }
+    // initialize Limine modules
+    limine_module_ss: limine_modules_init(); {
+        initrd_load();
+        dualslotvalidating();
+        //keymaps_load();
+        //logos_load();
+        //users_load();
+    }
+
+    #if ENABLE_ATA == 1
+    	ata_init();{
+            // initialize partition system
+            int part_result = partition_init();
+
+            if (part_result != 0 || partition_needs_format()) {
+                log("[DISK]", "no valid partition found\n", warning);
+                log("[DISK]", "run 'install' to set up the disk\n", warning);
+            }
+
+            installer_run();
+
+            #if ENABLE_FAT32 == 1
+                log("[FAT32]", "mounting FAT32 file system\n", d);
+                fat32_init();
+            #endif
+        }
+        #if ENABLE_FAT32
+            //fat32_mount("/dev/hda1", "/boot", "fat32");
+            //log("[BOOT]", "Boot partition mounted at /boot\n", d);
+        #endif
+    #else
+            log("[ATA]", "skipped (hardware compatibility)\n", warning);
+    #endif
+
+    ofs:{
+	    fs_mount(NULL, SYS_MOUNT_DEFAULT, SYSFS);
+	    //fs_mount(NULL, PIPE_MOUNT_DEFAULT, PIPEFS);
+    };
+
+    #if HARDWARE_SC == 1
+        // let the cpu rest a small time
+        for (volatile int i = 0; i < 1000000; i++) {
+        	nop();
+        }
+    #endif
+
+    #if DEBUG_LOGGING == 1
+    	//log("[KERNEL]", "listing proceses\n", d);
+    	//proc_list_procs(proc_mgr);
+     	/*
+      		currently there arent any processes
+       	*/
+     	//log("[KERNEL]", "listing kernel proceses\n", d);
+     	/*
+    		only bootscreen [0]
+       	*/
+    	//dump_kprocesses();
+     	memlog_print_map();
+    #endif
+
+    module_ss: module_init(); {
+        // Register device modules
+        log("[MOD]", "Init modules:\n", d);
+
+        //module_register(&console_module);
+        module_register(&ata_module);
+        module_register(&null_module);
+        module_register(&zero_module);
+        module_register(&fb0_module);
+        module_register(&kbd_dev_module);
+        module_register(&mouse0_module);
+        module_register(&eth0_module);
+        module_register(&tty0_module);{    tty_set_active(0); }
+        module_register(&tty1_module);
+        module_register(&ptmx_module);
+        module_register(&pts0_module);
+        module_register(&urandom_module);
+        module_register(&random_module);
+
+        log("[MOD]", "found ", d);
+        int count = module_get_count();
+        str_append_uint(buf, count);
+        BOOTUP_PRINT(buf, yellow());
+        BOOTUP_PRINT(" module(s)\n", white());
+
+    }
+
+    { // Final things
+        fs_register_mods();
+
+        //create test file in /tmp
+        fs_create_test_file();
+
+        //buf[0] = '\0'; // clear buffer so it can be used again
+
+        if (init_boot_log >= 0) {
+            fs_close(init_boot_log);
+            init_boot_log = -1;
+        }
+
+        uci();
+
+        #if HARDWARE_SC == 1
+            // let the cpu rest a small time
+            for (volatile int i = 0; i < 1000000; i++) {
+           		__asm__ volatile("nop");
+            }
+        #endif
+    }
+    //hcf();
+
+    for (volatile int i = 0; i < 100000; i++) {
+   		__asm__ volatile("nop");
+    }
+
+    //extern void kproc(void);
+    genprocs();
+    //proc_list_procs(proc_mgr);
+    //dump_kprocesses();
+    //hcf();
+    //DEinit();
+
+    //should not reach here
+    //font_manager_set_context(FONT_CONTEXT_PANIC);
+    #if USE_HCF == 1
+        hcf();
+    #else
+        panic("USE_HCF; FAILED --> USING PANIC");
+    #endif
+
+}

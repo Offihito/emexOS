@@ -13,7 +13,7 @@ VAS  = @echo "[AS]  $<" && $(AS)
 VLD  = @echo "[LD]  $@" && $(LD)
 
 # Compiler Flags
-COMMON_FLAGS += -I $(INCLUDE_DIR) -I $(SRC_DIR) -I shared/ -ffreestanding -fno-stack-protector -fno-lto \
+COMMON_FLAGS += -I $(INCLUDE_DIR) -I $(SRC_DIR) -I emex/ -I emex/kernel -ffreestanding -fno-stack-protector -fno-lto \
                 -fno-PIE -fno-pic -m64 -march=x86-64 -mno-80387 -mno-mmx \
                 -mno-sse -mno-sse2 -mno-red-zone -mcmodel=kernel -Wall -Wextra -Wpedantic
 CFLAGS ?= $(COMMON_FLAGS) -std=c23
@@ -22,10 +22,8 @@ LDFLAGS ?= -nostdlib -static -no-pie -z text -z max-page-size=0x1000
 ASFLAGS ?= -f elf64
 
 # Directories and files
-SYSCALL_SRCS = src/kernel/syscalls/syscalls.c \
-               src/kernel/syscalls/syscall_entry.asm
-SRC_DIR := src
-USERSPACE_DIR = src/userspace
+SRC_DIR := emex
+USERSPACE_DIR = user/
 USERSPACE_BUILD = build/userspace
 BUILD_DIR := build
 DISK_DIR := dsk

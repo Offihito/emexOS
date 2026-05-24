@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BUILD_FILE=".build"
-OUT_FILE="shared/ebuild.h"
+OUT_FILE="emex/ebuild.h"
 
 # build nummer
 if [ -f "$BUILD_FILE" ]; then
@@ -33,8 +33,8 @@ case $MONTH_STR in
     Nov) M="NR" ;;
     Dec) M="DR" ;;
 esac
-
-BUILD="${YEAR}${M}.01.${n}"
+#                  VER
+BUILD="${YEAR}${M}.07.${n}"
 
 echo "[BUILDGEN] build = $BUILD"
 

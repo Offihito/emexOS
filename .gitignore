@@ -23,11 +23,10 @@ tools/vad.py
 
 logo.txt
 
-src/kernel/console/functions/edit.c
 
 **/tinygl/
-src/userspace/libs/tinygl/
-src/userspace/libs/tinygl/*
+user/libs/tinygl/
+user/libs/tinygl/*
 
 tmp/
 

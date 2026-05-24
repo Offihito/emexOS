@@ -5,7 +5,7 @@ set -e
 
 # Configuration
 TINYGL_REPO="https://github.com/C-Chads/TinyGL.git"
-DEST_DIR="src/userspace/libs/tinygl"
+DEST_DIR="user/libs/tinygl"
 
 echo ":: Porting TinyGL to emexOS..."
 
@@ -65,5 +65,5 @@ gsed -i 's/static void\* gl_zalloc/static inline void\* gl_zalloc/' include/zbuf
 
 echo ":: TinyGL porting setup complete."
 echo ":: To build libc and TinyGL, run: "
-echo "   make -C src/userspace/libc clean && make -C src/userspace/libc"
-echo "   make -C src/userspace/libs/tinygl"
+echo "   make -C user/libc clean && make -C user/libc"
+echo "   make -C user/libs/tinygl"

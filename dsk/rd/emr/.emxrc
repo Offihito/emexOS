@@ -1,6 +1,9 @@
-var gui = 1 // the variable just needs to exist to work
-//var ebl = 1
+//
+// @FILE: /emr/.emxrc
+// start file
+//
 
+var gui = 1 // the variable just needs to exist to work
 var lsblk       = ("/bin/lsblk.elf")
 var stinf       = ("/emr/system/system.emx/stinf.elf")
 var desktop     = ("/emr/system/desktop.elf")

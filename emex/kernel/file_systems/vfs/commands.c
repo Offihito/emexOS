@@ -1,0 +1,213 @@
+#include "vfs.h"
+#include <kernel/mem/klime/klime.h>
+#include <kernel/user/users.h>
+#include <kernel/mem/lib/main.h>
+#include <kernel/graph/lib/string.h>
+
+
+int fs_open(const char *path, int flags) {
+  fs_node *node = fs_resolve(path);
+
+  // create if O_CREAT and doesn't exist
+  if (!node && (flags & O_CREAT)) {
+    char ppath[FS_MAX_PATH];
+    char fname[64];
+
+    // find last dir slash
+    const char *last = path;
+    for (const char *p = path; *p; p++) {
+      if (*p == '/')
+        last = p;
+    }
+
+    int plen = last - path;
+    if (plen == 0)
+      plen = 1;
+
+    for (int i = 0; i < plen && i < FS_MAX_PATH - 1; i++) {
+      ppath[i] = path[i];
+    }
+    ppath[plen] = '\0';
+    str_copy(fname, last + 1);
+
+    // create file
+    fs_node *parent = fs_resolve(ppath);
+    if (parent && parent->ops && parent->ops->create) {
+      parent->ops->create(parent, fname);
+      node = fs_resolve(path);
+    }
+  }
+
+  if (!node)
+    return -1;
+
+  // kernel enforced permission check
+  {
+    u8 need = 0;
+    int acc = flags & 0x03;
+    if (acc == O_RDONLY || acc == O_RDWR)
+      need |= FS_PERM_R;
+    if (acc == O_WRONLY || acc == O_RDWR)
+      need |= FS_PERM_W;
+    if (need && !fs_check_perm(node, g_current_uid, g_current_gid, need))
+      return -1;
+  }
+
+  // alloc file struct
+  fs_file *file = (fs_file *)klime_create((klime_t *)fs_klime, sizeof(fs_file));
+  if (!file)
+    return -1;
+
+  file->node = node;
+  file->pos = 0;
+  file->flags = flags;
+
+  // call fs open
+  if (node->ops && node->ops->open) {
+    if (node->ops->open(node, file) != 0) {
+      klime_free((klime_t *)fs_klime, (u64 *)file);
+      return -1;
+    }
+  }
+
+  int fd = fs_alloc_fd(file);
+  if (fd < 0) {
+    klime_free((klime_t *)fs_klime, (u64 *)file);
+    return -1;
+  }
+
+  return fd;
+}
+
+int fs_close(int fd) {
+  fs_file *file = fs_get_file(fd);
+  if (!file)
+    return -1;
+
+  // call fs close
+  if (file->node->ops && file->node->ops->close) {
+    file->node->ops->close(file);
+  }
+
+  klime_free((klime_t *)fs_klime, (u64 *)file);
+  fs_free_fd(fd);
+
+  return 0;
+}
+
+ssize_t fs_read(int fd, void *buf, size_t cnt) {
+  fs_file *file = fs_get_file(fd);
+  if (!file)
+    return -1;
+  if (!fs_check_perm(file->node, g_current_uid, g_current_gid, FS_PERM_R))
+    return -1;
+  if (!file->node->ops || !file->node->ops->read)
+    return -1;
+
+  return file->node->ops->read(file, buf, cnt);
+}
+
+ssize_t fs_write(int fd, const void *buf, size_t cnt) {
+  fs_file *file = fs_get_file(fd);
+  if (!file)
+    return -1;
+  if (!fs_check_perm(file->node, g_current_uid, g_current_gid, FS_PERM_W))
+    return -1;
+  if (!file->node->ops || !file->node->ops->write)
+    return -1;
+
+  return file->node->ops->write(file, buf, cnt);
+}
+
+int fs_mkdir(const char *path) {
+  char ppath[FS_MAX_PATH];
+  char dname[64];
+
+  // find last slash
+  const char *last = path;
+  for (const char *p = path; *p; p++) {
+    if (*p == '/')
+      last = p;
+  }
+
+  // extract parent path
+  int plen = last - path;
+  if (plen == 0)
+    plen = 1;
+
+  for (int i = 0; i < plen && i < FS_MAX_PATH - 1; i++) {
+    ppath[i] = path[i];
+  }
+  ppath[plen] = '\0';
+  str_copy(dname, last + 1);
+
+  // find parent and create dir
+  fs_node *parent = fs_resolve(ppath);
+  if (!parent || !parent->ops || !parent->ops->mkdir)
+    return -1;
+
+  int ret = parent->ops->mkdir(parent, dname);
+
+  if (ret == 0) {
+    BOOTUP_PRINT("[FS]", green());
+    BOOTUP_PRINT(" mkdir ", GFX_ST_WHITE);
+    BOOTUP_PRINT(path, GFX_ST_WHITE);
+    BOOTUP_PRINT("\n", GFX_ST_WHITE);
+  }
+
+  return ret;
+}
+
+int fs_unlink(const char *path) {
+  if (!path)
+    return -1;
+
+  char ppath[FS_MAX_PATH];
+  char fname[64];
+
+  // split path into parent and filename
+  const char *last = path;
+  for (const char *p = path; *p; p++) {
+    if (*p == '/')
+      last = p;
+  }
+
+  int plen = last - path;
+  if (plen == 0)
+    plen = 1;
+
+  for (int i = 0; i < plen && i < FS_MAX_PATH - 1; i++) {
+    ppath[i] = path[i];
+  }
+  ppath[plen] = '\0';
+  str_copy(fname, last + 1);
+
+  if (!fname[0])
+    return -1;
+
+  fs_node *parent = fs_resolve(ppath);
+  if (!parent || parent->type != FS_DIR)
+    return -1;
+
+  // use fs unlink op if available
+  if (parent->ops && parent->ops->unlink) {
+    return parent->ops->unlink(parent, fname);
+  }
+
+  // fallback: remove from children linked list directly
+  fs_node *prev = NULL;
+  fs_node *child = parent->children;
+  while (child) {
+    if (str_equals(child->name, fname)) {
+      if (prev)
+        prev->next = child->next;
+      else
+        parent->children = child->next;
+      return 0;
+    }
+    prev = child;
+    child = child->next;
+  }
+
+  return -1;
+}

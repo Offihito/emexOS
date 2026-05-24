@@ -3,8 +3,7 @@ LIMINE_DIR := $(INCLUDE_DIR)/limine
 LIMINE_TOOL := $(LIMINE_DIR)/limine
 
 # Find all C, C++ and Assembly files
-SRCS = $(shell find $(SRC_DIR) shared \
-	-path "src/userspace" -prune -o \
+SRCS = $(shell find $(SRC_DIR) \
 	\( -name "*.c" -o -name "*.cpp" -o -name "*.asm" \) -print)
 OBJS = $(SRCS:%=$(BUILD_DIR)/%.o)
 
@@ -35,14 +34,14 @@ disk:
 	@echo "[DISK] created $(DISK_IMG)"
 
 # Kernel binary
-$(BUILD_DIR)/kernel.elf: src/kernel/linker.ld $(OBJS)
+$(BUILD_DIR)/kernel.elf: $(SRC_DIR)/kernel/linker.ld $(OBJS)
 	@mkdir -p $(dir $@)
 	$(VLD) $(LDFLAGS) -T $< $(OBJS) -o $@
 
 # Build userspace first
 userspace:
-	@$(MAKE) -C src/userspace clean
-	@$(MAKE) -C src/userspace
+	@$(MAKE) -C $(USERSPACE_DIR) clean
+	@$(MAKE) -C $(USERSPACE_DIR)
 
 buildgen:
 	@chmod +x tools/genbuild.sh
@@ -81,36 +80,37 @@ $(ISO): limine.conf $(LIMINE_TOOL) buildgen $(BUILD_DIR)/kernel.elf disk userspa
 	@mkdir -p $(DISK_DIR)/rd/emr/system/bin
 	@mkdir -p $(DISK_DIR)/rd/emr/system/libraries
 	@mkdir -p $(DISK_DIR)/rd/emr/system/libraries/emex
-	@cp -r src/userspace/apps/shell/shell.emx $(DISK_DIR)/rd/emr/system
-	@cp -r src/userspace/apps/terminal/terminal.emx $(DISK_DIR)/rd/emr/system
-	@cp -r src/userspace/apps/system/system.emx $(DISK_DIR)/rd/emr/system/
-	@cp -r src/userspace/apps/system/stinf/stinf.elf $(DISK_DIR)/rd/emr/system/system.emx
-	@cp -r src/userspace/apps/desktop/desktop.elf $(DISK_DIR)/rd/emr/system/
-	@cp -r src/userspace/apps/sysinfo/sysinfo.elf $(DISK_DIR)/rd/emr/system/
-	@cp -r src/userspace/apps/filemanager/fm.elf $(DISK_DIR)/rd/emr/system/
-	@cp -r src/userspace/apps/template/template.elf $(DISK_DIR)/rd/emr/system/
-	@cp -r src/userspace/apps/gears/gears.elf $(DISK_DIR)/rd/bin/gears.elf
+	@cp -r $(USERSPACE_DIR)/apps/shell/shell.emx $(DISK_DIR)/rd/emr/system
+	@cp -r $(USERSPACE_DIR)/apps/terminal/terminal.emx $(DISK_DIR)/rd/emr/system
+	@cp -r $(USERSPACE_DIR)/apps/system/system.emx $(DISK_DIR)/rd/emr/system/
+	@cp -r $(USERSPACE_DIR)/apps/system/stinf/stinf.elf $(DISK_DIR)/rd/emr/system/system.emx
+	@cp -r $(USERSPACE_DIR)/apps/desktop/desktop.elf $(DISK_DIR)/rd/emr/system/
+	@cp -r $(USERSPACE_DIR)/apps/sysinfo/sysinfo.elf $(DISK_DIR)/rd/emr/system/
+	@cp -r $(USERSPACE_DIR)/apps/filemanager/fm.elf $(DISK_DIR)/rd/emr/system/
+	@cp -r $(USERSPACE_DIR)/apps/template/template.elf $(DISK_DIR)/rd/emr/system/
+	@cp -r $(USERSPACE_DIR)/apps/gears/gears.elf $(DISK_DIR)/rd/bin/gears.elf
 
 	@echo "[MK] copying other binarys..."
 	# delete those using make binclean
-	@cp src/userspace/apps/login/login.elf $(DISK_DIR)/rd/emr/system/
-	@cp src/userspace/bin/hello/hello.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/touch/touch.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/uname/uname.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/initd/initd.elf $(DISK_DIR)/rd/emr/system/system.emx/
-	@cp src/userspace/bin/echo/echo.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/ls/ls.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/cd/cd.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/rm/rm.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/cat/cat.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/tree/tree.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/lsblk/lsblk.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/reboot/reboot.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/uptime/uptime.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/pwd/pwd.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/ps/ps.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/meminfo/meminfo.elf $(DISK_DIR)/rd/bin/
-	@cp src/userspace/bin/dofetch/dofetch.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/apps/login/login.elf $(DISK_DIR)/rd/emr/system/
+	@cp $(USERSPACE_DIR)/bin/hello/hello.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/touch/touch.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/uname/uname.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/initd/initd.elf $(DISK_DIR)/rd/emr/system/system.emx/
+	@cp $(USERSPACE_DIR)/bin/echo/echo.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/ls/ls.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/cd/cd.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/rm/rm.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/cat/cat.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/tree/tree.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/lsblk/lsblk.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/reboot/reboot.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/shutdown/shutdown.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/uptime/uptime.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/pwd/pwd.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/ps/ps.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/meminfo/meminfo.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/dofetch/dofetch.elf $(DISK_DIR)/rd/bin/
 
 # libs arent copied anymore due merge conflicts in prs
 #@echo "[MK] copying libs..."
@@ -192,7 +192,7 @@ $(BUILD_DIR)/%.asm.o: %.asm
 clean:
 	@echo "[CLR] Cleaning..."
 	@rm -rf $(BUILD_DIR)
-	@$(MAKE) -C src/userspace clean
+	@$(MAKE) -C $(USERSPACE_DIR) clean
 
 
 binclean:
