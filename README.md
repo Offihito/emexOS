@@ -67,15 +67,6 @@ After booting, you will get into login and will be asked for a password and user
 
 Currently, no SMP support is available just yet so emexOS runs using only a single core.
 
-<div align="center">
-	<h2> Contributors </h2>
-	<a href="https://github.com/emexos/emexOS/graphs/contributors">
-	  <img src="https://contrib.rocks/image?repo=emexos/emexOS" />
-	</a>
-</div>
-
-</br>
-
 <div align="right">
 	<p>readme by emex, Voxi0 and Bi Moz </p>
 </div>
