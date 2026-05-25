@@ -144,8 +144,8 @@ run: $(ISO)
 		-m 2048 \
 		-netdev user,id=net0 \
 		-device e1000,netdev=net0 \
-		-drive if=pflash,format=raw,readonly=on,file=uefi/OVMF_CODE.fd \
-		-drive if=pflash,format=raw,file=uefi/OVMF_VARS.fd \
+		-drive if=pflash,format=raw,readonly=on,file=include/uefi/OVMF_CODE.fd \
+		-drive if=pflash,format=raw,file=include/uefi/OVMF_VARS.fd \
 		-drive file=$(DISK_IMG),format=raw,if=ide,index=0 \
 		-cdrom $< \
 		-serial stdio 2>&1 \
@@ -156,8 +156,8 @@ install_disk: $(ISO) disk
 	@echo "[QEMU] running installer..."
 	@qemu-system-x86_64 \
 		-M pc -cpu qemu64 -m 2048 \
-		-drive if=pflash,format=raw,readonly=on,file=uefi/OVMF_CODE.fd \
-		-drive if=pflash,format=raw,file=uefi/OVMF_VARS.fd \
+		-drive if=pflash,format=raw,readonly=on,file=include/uefi/OVMF_CODE.fd \
+		-drive if=pflash,format=raw,file=include/uefi/OVMF_VARS.fd \
 		-drive file=$(DISK_IMG),format=raw,if=ide,index=0 \
 		-cdrom $(ISO) -boot d \
 		-serial stdio 2>&1 || true
