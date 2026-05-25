@@ -15,7 +15,7 @@ a simple x86_64 Operating System in C made from scratch
 	</div>
 	-> emexOS is not based on any existing kernel <-
 	<br>
-	<a href="https://discord.gg/JFGK4yqSyA">
+	<a href="https://discord.gg/Cbeg3gJzC7">
 		<img src="https://img.shields.io/badge/Join%20the%20Discord-Black?style=for-the-badge&logo=discord&logoColor=white&color=black" alt="Discord Badge" />
 	</a>
 </div>
