@@ -80,6 +80,7 @@ void uproc(void) {
         clear(BS2, 0xff000000);
         uninit_bootscreen();
         bs_switch(USER_SCREEN_MODE);
+        bs_clear_screen(BS2, 0xffff0000);
 
         dump_kprocesses();
         proc_list_procs(proc_mgr);

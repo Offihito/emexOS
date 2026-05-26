@@ -2,10 +2,12 @@
 
 #include <kernel/module/module.h>
 #include <kernel/graph/graphics.h>
+#include <kernel/kernel_processes/bootscreen/boot.h>
 #include <kernel/communication/serial.h>
 #include <kernel/graph/lib/string.h>
 
 #include <types.h>
+#include <config/user.h>
 
 #include <drivers/drivers.h>
 
@@ -31,9 +33,9 @@ static int fb0_read(void *handle, void *buf, size_t count, u64 offset)
 {
     (void)handle;
     (void)offset;
-    u32 *fb = get_framebuffer();
-    u32 pitch = get_fb_pitch();
-    u32 h = get_fb_height();
+    u32 *fb = bs_screens[USER_SCREEN_MODE].buffer;
+    u32 pitch = bs_screens[USER_SCREEN_MODE].width * 4;
+    u32 h = bs_screens[USER_SCREEN_MODE].height;
 
     if (!fb) return -1;
 
@@ -54,9 +56,12 @@ static int fb0_write(void *handle, const void *buf, size_t count, u64 offset)
 {
     (void)handle;
     (void)offset;
-    u32 *fb = get_framebuffer();
-    u32 pitch = get_fb_pitch();
-    u32 h = get_fb_height();
+
+    bs_screen_t *scr = &bs_screens[USER_SCREEN_MODE];
+
+    u32 *fb = bs_screens[USER_SCREEN_MODE].buffer;
+    u32 pitch = bs_screens[USER_SCREEN_MODE].width * 4;
+    u32 h = bs_screens[USER_SCREEN_MODE].height;
 
     if (!fb) return -1;
 
@@ -69,7 +74,26 @@ static int fb0_write(void *handle, const void *buf, size_t count, u64 offset)
     if (count > remaining) count = remaining;
 
     memcpy((u8 *)fb + fb_write_pos, buf, count);
+
+    u32 start_pixel = fb_write_pos / 4;
+    u32 width = scr->width;
+    u32 x = start_pixel % width;
+    u32 y = start_pixel / width;
+    u32 pixels_written = count / 4;
+    u32 rect_w = pixels_written;
+
+    if (rect_w > width) rect_w = width;
+
+    u32 rect_h = 1 + (pixels_written / width);
+
     fb_write_pos += count;
+
+    /*needs to be the exact screen as userspace has,
+     * the kernel DOES NOT use /dev/fb0, it should use the bs
+     */
+    bs_switch(USER_SCREEN_MODE);
+    bs_flush_rect(x, y, rect_w, rect_h);
+
     return (int)count;
 }
 
@@ -77,10 +101,10 @@ int fb0_ioctl(int request, void *arg)
 {
     if (!arg) return -1;
 
-    u32 w = get_fb_width();
-    u32 h = get_fb_height();
-    u32 pitch = get_fb_pitch();
-    u32 *fb = get_framebuffer();
+    u32 w = bs_screens[USER_SCREEN_MODE].width;
+    u32 h = bs_screens[USER_SCREEN_MODE].height;
+    u32 pitch = bs_screens[USER_SCREEN_MODE].width * 4;
+    u32 *fb = bs_screens[USER_SCREEN_MODE].buffer;
 
     switch (request) {
         case FBIOGET_VSCREENINFO:
