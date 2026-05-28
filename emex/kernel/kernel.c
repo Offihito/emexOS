@@ -168,13 +168,6 @@ void _start(void)
     #endif
 
     memory_ss: { // MADE BY @TSARAKI (github)
-
-        cpu_detect();
-        #if X64 == 1
-            gdt_init();
-            idt_init();
-        #endif
-
         log("[MEM]", "Initializing memory management\n", d);
         // Initialize mem
         physmem_init(memmap_request.response, hhdm_request.response);
@@ -223,60 +216,64 @@ void _start(void)
         #else
             log("[ULIME]", "skipped (hardware compatibility)\n", warning);
         #endif
-        #if ENABLE_ULIME
-            if (ulime) {
-                scheduler = scheduler_init(ulime, SCHEDQUANT);
-                proc_mgr = proc_mng_init(ulime);
-
-                mt = (mt_t*)klime_create(ulime->klime, sizeof(mt_t));
-                if (mt) {
-                    mt_init(mt, scheduler, ulime);
-                    //log("[MT]", "multitasking initialized\n", d);
-                    //ipc_init();
-                    //ipc_test();
-                }
-
-                if (scheduler) {
-                    char buf[32];
-                    str_append_uint(buf, SCHEDQUANT);
-                    log("[SCHED]", "initialized quantum == ", d);
-                    BOOTUP_PRINT(buf, white());
-                    BOOTUP_PRINT("\n", white());
-                }
-                if (proc_mgr) {
-                    log("[PROCMGR]", "initialized\n", d);
-                }
-
-                init_ipc:
-            	{
-	                ipc_messages_init();
-					log("[IPC_MESSAGES]", "initialized\n", d);
-	                ipc_shm_init();
-					log("[IPC_SHM]", "initialized\n", d);
-	                //ipc_test();
-                };
-
-                syscall_arch_init(); // SYSCALL/SYSRET
-                _init_syscalls_table(ulime);
-            }
-        #endif
-
-        init_acpi(); // Init ACPI
-
-        u32 freq = 1000;
-        timer_init(freq);
-        BOOTUP_PRINT_INT(freq, white());
-        BOOTUP_PRINT(" 1ms tick)\n", white());
-        timer_set_boot_time(); //for uptime command
-
-        pci_init();
-        ahci_init();
-        //pci will get really useful with xhci/other usb
 
         fs_system_init(klime);
-
-        //BOOTUP_PRINT("\n", GFX_WHITE);
     }
+    cpu_detect();
+    #if X64 == 1
+        gdt_init();
+        idt_init();
+    #endif
+    #if ENABLE_ULIME
+        if (ulime) {
+            scheduler = scheduler_init(ulime, SCHEDQUANT);
+            proc_mgr = proc_mng_init(ulime);
+
+            mt = (mt_t*)klime_create(ulime->klime, sizeof(mt_t));
+            if (mt) {
+                mt_init(mt, scheduler, ulime);
+                //log("[MT]", "multitasking initialized\n", d);
+                //ipc_init();
+                //ipc_test();
+            }
+
+            if (scheduler) {
+                char buf[32];
+                str_append_uint(buf, SCHEDQUANT);
+                log("[SCHED]", "initialized quantum == ", d);
+                BOOTUP_PRINT(buf, white());
+                BOOTUP_PRINT("\n", white());
+            }
+            if (proc_mgr) {
+                log("[PROCMGR]", "initialized\n", d);
+            }
+
+            init_ipc:
+           	{
+                ipc_messages_init();
+				log("[IPC_MESSAGES]", "initialized\n", d);
+                ipc_shm_init();
+				log("[IPC_SHM]", "initialized\n", d);
+                //ipc_test();
+            };
+
+            syscall_arch_init(); // SYSCALL/SYSRET
+            _init_syscalls_table(ulime);
+        }
+    #endif
+    init_acpi(); // Init ACPI
+
+    u32 freq = 1000;
+    timer_init(freq);
+    BOOTUP_PRINT_INT(freq, white());
+    BOOTUP_PRINT(" 1ms tick)\n", white());
+    timer_set_boot_time(); //for uptime command
+
+    pci_init();
+    ahci_init();
+    //pci will get really useful with xhci/other usb
+
+    //BOOTUP_PRINT("\n", GFX_WHITE);
 
     kernel_slot_ss: {
         dualslotvalidating();

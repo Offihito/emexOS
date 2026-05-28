@@ -2,19 +2,20 @@
 #define _VFS_H
 
 #include <types.h>
-// #include <kernel/file_systems/vfs/pipefs/pipefs.h>
+//#include <kernel/file_systems/vfs/pipefs/pipefs.h>
 #include <kernel/net/pipe/pipe.h>
 
 // file types
 #define FS_FILE 0x01
-#define FS_DIR 0x02
-#define FS_DEV 0x04
+#define FS_DIR  0x02
+#define FS_DEV  0x04
 
 // file flags
 #define O_RDONLY 0x01
 #define O_WRONLY 0x02
-#define O_RDWR 0x03
-#define O_CREAT 0x04
+#define O_RDWR   0x03
+#define O_CREAT  0x04
+
 
 // seek modes
 #define SEEK_SET 0
@@ -23,7 +24,7 @@
 
 // limits
 #define FS_MAX_MNTS 20
-#define FS_MAX_FDS 64
+#define FS_MAX_FDS  64
 #define FS_MAX_PATH 200
 
 // permission bits
@@ -33,99 +34,99 @@
 
 // default mode values
 #define FS_MODE_FILE 0644
-#define FS_MODE_DIR 0755
-#define FS_MODE_DEV 0660
+#define FS_MODE_DIR  0755
+#define FS_MODE_DEV  0660
 
 typedef struct fs_node fs_node;
 typedef struct fs_file fs_file;
-typedef struct fs_mnt fs_mnt;
-typedef struct fs_ops fs_ops;
+typedef struct fs_mnt  fs_mnt;
+typedef struct fs_ops  fs_ops;
 typedef struct fs_type fs_type;
 
 // node (file/dir/device)
 struct fs_node {
-  char name[64]; // files
-  u8 type;       // #define FS_FILE 0x01
-                 // #define FS_DIR  0x02
-                 // #define FS_DEV  0x04
+    char name[64]; // files
+    u8 type;    //#define FS_FILE 0x01
+                //#define FS_DIR  0x02
+                //#define FS_DEV  0x04
 
-  u64 size; // file size (bytes)
-  u64 inode;
+    u64 size;   // file size (bytes)
+    u64 inode;
 
-  u32 uid;
-  u32 gid;
-  u16 mode;
+    u32 uid;
+    u32 gid;
+    u16 mode;
 
-  fs_ops *ops; // open, write, ...
-  void *priv;  // fs-specific data
+    fs_ops *ops;    // open, write, ...
+    void *priv;     // fs-specific data
 
-  fs_node *children; // directorys e.g:
-  // tmp/
-  // |- log
-  // its a children (log) while tmp is the parent
-  fs_node *next;   // linked lists
-  fs_node *parent; // parent path/direcotry
+    fs_node *children; // directorys e.g:
+    // tmp/
+    // |- log
+    // its a children (log) while tmp is the parent
+    fs_node *next; // linked lists
+    fs_node *parent; // parent path/direcotry
 };
 
 // file descriptor
 struct fs_file {
-  fs_node *node;
-  u64 pos;
-  u32 flags;
+    fs_node *node;
+    u64 pos;
+    u32 flags;
 };
 typedef struct {
-  u8 type;
-  char name[64];
+    u8 type;
+    char name[64];
 } _emx_kdirent_t;
 
 // operations
 struct fs_ops {
-  int (*open)(fs_node *node, fs_file *file);
-  int (*close)(fs_file *file);
-  ssize_t (*read)(fs_file *file, void *buf, size_t cnt);
-  ssize_t (*write)(fs_file *file, const void *buf, size_t cnt);
+    int (*open)(fs_node *node, fs_file *file);
+    int (*close)(fs_file *file);
+    ssize_t (*read)(fs_file *file, void *buf, size_t cnt);
+    ssize_t (*write)(fs_file *file, const void *buf, size_t cnt);
 
-  fs_node *(*lookup)(fs_node *dir, const char *name);
-  int (*create)(fs_node *dir, const char *name);
-  int (*mkdir)(fs_node *dir, const char *name);
-  int (*unlink)(fs_node *dir, const char *name); // remove file or dir
+    fs_node* (*lookup)(fs_node *dir, const char *name);
+    int (*create)(fs_node *dir, const char *name);
+    int (*mkdir)(fs_node *dir, const char *name);
+    int (*unlink)(fs_node *dir, const char *name); // remove file or dir
 
-  fs_node *(*readdir)(fs_node *dir);
+    fs_node* (*readdir)(fs_node *dir);
 };
 
 // filesystem type
 struct fs_type {
-  const char *name;
-  int (*mount)(const char *src, const char *tgt, fs_mnt *mnt);
-  fs_ops *ops;
+    const char *name;
+    int (*mount)(const char *src, const char *tgt, fs_mnt *mnt);
+    fs_ops *ops;
 };
 
 // mount point
 struct fs_mnt {
-  char path[FS_MAX_PATH];
-  fs_type *type; // e.g. ptr to tmpfs, devfs
-  fs_node *root;
-  void *priv;
-  int active; // 1 == mounted, 0 == unmounted
+    char path[FS_MAX_PATH];
+    fs_type *type;  // e.g. ptr to tmpfs, devfs
+    fs_node *root;
+    void *priv;
+    int active; // 1 == mounted, 0 == unmounted
 };
 
 // main
 void fs_init(void);
-// void fs_set_klime(void *klime);
+//void fs_set_klime(void *klime);
 void fs_system_init(void *klime);
 void fs_register_mods(void);
 void fs_create_test_file(void);
 
 int fs_register(fs_type *type);
 int fs_mount(const char *src, const char *tgt, const char *type);
-fs_node *fs_resolve(const char *path);
-fs_node *fs_mknode(const char *name, u8 type);
+fs_node* fs_resolve(const char *path);
+fs_node* fs_mknode(const char *name, u8 type);
 int fs_addchild(fs_node *parent, fs_node *child);
 
 // fd management
 int fs_alloc_fd(fs_file *file);
 void fs_free_fd(int fd);
-fs_file *fs_get_file(int fd);
+fs_file* fs_get_file(int fd);
 int fs_set_fd(int fd, fs_file *file); // direct slot assignment (PTY stdio)
 
 // permission check
@@ -145,27 +146,27 @@ extern void *fs_klime;
 
 // tmpfs
 typedef struct {
-  void *data;
-  u64 cap;
+    void *data;
+    u64 cap;
 } tmpfs_data;
 
-// void tmpfs_init(void);
+//void tmpfs_init(void);
 void tmpfs_register(void);
-// void tmpfs_set_klime(void *klime);
+//void tmpfs_set_klime(void *klime);
 
 // devfs
 #include <kernel/module/module.h>
 
 typedef struct {
-  driver_module *mod;
-  void *handle;
+    driver_module *mod;
+    void *handle;
 } devfs_data;
 
-// void devfs_init(void);
+//void devfs_init(void);
 void devfs_register(void);
 int devfs_register_device(driver_module *mod);
 
 void procfs_register(void);
-// void netfs_register(void);
+//void netfs_register(void);
 
 #endif

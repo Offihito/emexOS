@@ -19,7 +19,7 @@ void dump_kprocesses(void) {
 */
 
 void dump_kprocesses(void) {
-    print("[KPROC] table (", white());
+    print("kernel processes table (", white());
     printInt(kproc_cnt, white());
     print("/", white());
     printInt(KPROC_MAX, white());
