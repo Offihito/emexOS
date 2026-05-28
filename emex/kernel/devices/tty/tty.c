@@ -123,8 +123,10 @@ void tty_write_char(int id, char c)
                 t->ansi_state = TTY_ANSI_ESC;
             } else if (c == '\b') {
                 tty_buf_push(t, TTY_CELL_BACKSPACE, '\b', t->ansi_fg, t->ansi_bg);
+                printf("\b \b");
             } else {
                 tty_buf_push(t, TTY_CELL_CHAR, c, t->ansi_fg, t->ansi_bg);
+                printf("%c", c);
             }
             break;
 
@@ -199,12 +201,17 @@ void tty_write_char(int id, char c)
                 t->ansi_param_count = 0;
                 t->ansi_state = TTY_ANSI_NORMAL;
             } else if (c == 'J') {
-                if (t->ansi_param == 2)tty_buf_push(t, TTY_CELL_CLEAR, 0, t->ansi_fg, t->ansi_bg);
+	            if (t->ansi_param == 2)
+	            {
+	                tty_buf_push(t, TTY_CELL_CLEAR, 0, t->ansi_fg, t->ansi_bg);
+	                printf("\033[2J\033[H");
+	            }
                 t->ansi_param = 0;
                 t->ansi_private = 0;
                 t->ansi_state = TTY_ANSI_NORMAL;
             } else if (c == 'H') {
                 tty_buf_push(t, TTY_CELL_HOME, 0, 0, 0);
+                printf("\033[H");
                 t->ansi_param = 0;
                 t->ansi_state = TTY_ANSI_NORMAL;
             } else if (c == 'l') {

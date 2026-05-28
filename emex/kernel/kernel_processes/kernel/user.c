@@ -76,14 +76,34 @@ void uproc(void) {
 
         //memlog_print_map();
 
-        clear(BS1, 0xff000000);
-        clear(BS2, 0xff000000);
-        uninit_bootscreen();
-        bs_switch(USER_SCREEN_MODE);
-        bs_clear_screen(BS2, 0xffff0000);
+        bootscreen_services: {
+        	u32 fw     = get_fb_width();
+	        u32 fh     = get_fb_height();
+	        u32 half_w     = fw / 2;
+	        u32 half_h     = fh / 2;
 
-        dump_kprocesses();
-        proc_list_procs(proc_mgr);
+		    clear(BS1, 0xff000000);
+		    clear(BS2, 0xff000000);
+			clear(BS3, 0xffff0000);
+      		bs_backbuf_clear(0x00000000);
+
+	        uninit_bootscreen();
+	        bs_set_region(BS1, 0, 0,      half_w,half_h);
+	        bs_set_region(BS2, 0, half_h, half_w,fh - half_h);
+
+			/*userspace */
+	        //bs_set_region(BS3, half_w, 0, fw - half_w,fh);
+	        //bs_set_region(BS4, half_w, 0, fw - half_w,fh);
+			bs_set_region(USER_SCREEN_MODE, 0, 0, fw, fh);
+			bs_set_region(BS4, 0, 0, fw, fh);
+
+	        bs_switch(USER_SCREEN_MODE);
+			//clear(BS3, 0xff000033); // blue ig?
+
+   			dump_kprocesses();
+        	proc_list_procs(proc_mgr);
+        }
+
         ulime->ptr_proc_curr = init_proc;
 
         //hcf();

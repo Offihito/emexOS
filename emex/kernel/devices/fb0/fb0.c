@@ -58,12 +58,11 @@ static int fb0_write(void *handle, const void *buf, size_t count, u64 offset)
     (void)offset;
 
     bs_screen_t *scr = &bs_screens[USER_SCREEN_MODE];
+    u32 *fb_buf = scr->buffer;
+    u32 pitch = scr->width * 4;
+    u32 h = scr->height;
 
-    u32 *fb = bs_screens[USER_SCREEN_MODE].buffer;
-    u32 pitch = bs_screens[USER_SCREEN_MODE].width * 4;
-    u32 h = bs_screens[USER_SCREEN_MODE].height;
-
-    if (!fb) return -1;
+    if (!fb_buf) return -1;
 
     size_t fb_size = (size_t)pitch * h;
 
@@ -73,26 +72,24 @@ static int fb0_write(void *handle, const void *buf, size_t count, u64 offset)
     size_t remaining = fb_size - fb_write_pos;
     if (count > remaining) count = remaining;
 
-    memcpy((u8 *)fb + fb_write_pos, buf, count);
+    memcpy((u8 *)fb_buf + fb_write_pos, buf, count);
 
     u32 start_pixel = fb_write_pos / 4;
     u32 width = scr->width;
     u32 x = start_pixel % width;
     u32 y = start_pixel / width;
     u32 pixels_written = count / 4;
-    u32 rect_w = pixels_written;
-
-    if (rect_w > width) rect_w = width;
-
-    u32 rect_h = 1 + (pixels_written / width);
+    u32 rect_w = (pixels_written > width) ? width : pixels_written;
+    u32 rect_h = (pixels_written + width - 1) / width;
 
     fb_write_pos += count;
 
     /*needs to be the exact screen as userspace has,
      * the kernel DOES NOT use /dev/fb0, it should use the bs
      */
-    bs_switch(USER_SCREEN_MODE);
-    bs_flush_rect(x, y, rect_w, rect_h);
+    //bs_switch(USER_SCREEN_MODE);
+    //bs_flush_rect(x, y, rect_w, rect_h);
+    bs_flush_rect_screen(USER_SCREEN_MODE, x, y, rect_w, rect_h);
 
     return (int)count;
 }
@@ -139,7 +136,13 @@ int fb0_ioctl(int request, void *arg)
     	{
             fb_rect_t *r = (fb_rect_t *)arg;
             if (!r || !r->pixels) return -1;
-            u32 pitch_dw = pitch / 4;
+
+            // read from real fb instead of bs3
+            u32 *real_fb = get_framebuffer();
+            if (!real_fb) return -1;
+
+            u32 real_pitch_dw = get_fb_pitch() / 4;
+
             for (u32 row = 0; row < r->h; row++)
             {
                 u32 py = r->y + row;
@@ -147,7 +150,7 @@ int fb0_ioctl(int request, void *arg)
                 for (u32 col = 0; col < r->w; col++)
                 {
                     u32 px = r->x + col;
-                    r->pixels[row * r->w + col] = (px < w) ? fb[py * pitch_dw + px] : 0;
+                    r->pixels[row * r->w + col] = (px < w) ? real_fb[py * real_pitch_dw + px] : 0;
                 }
             }
             return 0;
@@ -156,9 +159,12 @@ int fb0_ioctl(int request, void *arg)
     	{
             fb_rect_t *r = (fb_rect_t *)arg;
             if (!r || !r->pixels) return -1;
-            u32 pitch_dw = pitch / 4;
-            for (u32 row = 0; row < r->h; row++)
-            {
+
+            u32 *real_fb   = get_framebuffer();
+            u32 real_pitch_dw = get_fb_pitch() / 4;
+            u32 pitch_dw   = pitch / 4;  // BS3 buffer pitch
+
+            for (u32 row = 0; row < r->h; row++) {
                 u32 py = r->y + row;
                 if (py >= h) break;
 
@@ -169,6 +175,8 @@ int fb0_ioctl(int request, void *arg)
                     u32 c = r->pixels[row * r->w + col];
                     if ((c >> 24) == 0) continue; // transparent
                     fb[py * pitch_dw + px] = c;
+
+                    if (real_fb) real_fb[py * real_pitch_dw + px] = c;
                 }
             }
 

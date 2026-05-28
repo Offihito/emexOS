@@ -24,9 +24,9 @@
 #include <limine/limine.h>
 
 #if ENABLE_ULIME
-extern proc_manager_t *proc_mgr;
-extern ulime_t *ulime;
-extern mt_t *mt;
+	extern proc_manager_t *proc_mgr;
+	extern ulime_t *ulime;
+	extern mt_t *mt;
 #endif
 
 void kproc(void);

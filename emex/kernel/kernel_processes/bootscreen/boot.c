@@ -16,10 +16,10 @@ bmp_image_t bs_logo;
 int bs_logo_loaded = 0;
 
 #define BS_MAX_PIX (1920 * 1200)
-static u32 bs_buf_left [BS_MAX_PIX / 2]; // BS1
-static u32 bs_buf_right[BS_MAX_PIX / 2]; // BS2
-static u32 bs_buf_full [BS_MAX_PIX];     // BS3
-static u32 bs_buf_bs4  [BS_MAX_PIX];     // BS4 (unused but allocated)
+static u32 bs_buf_left [BS_MAX_PIX / 4]; // BS1
+static u32 bs_buf_right[BS_MAX_PIX / 4]; // BS2
+static u32 bs_buf_full [BS_MAX_PIX / 2];     // BS3
+static u32 bs_buf_bs4  [BS_MAX_PIX / 2];     // BS4 (unused but allocated)
 
 static u32 bs_pdw = 0; /* fb_pitch : 4 */
 static u32 bs_fbh = 0; /* real fbh */
@@ -41,7 +41,8 @@ static void bs_blit_screen(int id)
     u32 sw = scr->width;
     u32 sh = scr->height;
 
-    for (u32 row = 0; row < sh; row++) {
+    for (u32 row = 0; row < sh; row++)
+    {
         u32 *dst = fb + (sy + row) * bs_pdw + sx;
         u32 *src = scr->buffer + row * sw;
         memcpy(dst, src, sw * sizeof(u32));
@@ -223,6 +224,31 @@ void bs_flush_rows(u32 y, u32 row_count)
 void bs_flush_rect(u32 x, u32 y, u32 w, u32 h)
 {
     bs_screen_t *scr = bs_get_active();
+    u32 *fb = get_framebuffer();
+    if (!fb || !scr->buffer || !bs_pdw) return;
+
+    u32 end_y = y + h;
+    if (end_y > scr->height) end_y = scr->height;
+    u32 end_x = x + w;
+    if (end_x > scr->width) end_x = scr->width;
+    u32 copy_w = end_x - x;
+    if (!copy_w) return;
+
+    u32 sx = scr->x;
+    u32 sy = scr->y;
+    u32 sw = scr->width;
+
+    for (u32 row = y; row < end_y; row++) {
+        u32 *dst = fb + (sy + row) * bs_pdw + (sx + x);
+        u32 *src = scr->buffer + row * sw + x;
+        memcpy(dst, src, copy_w * sizeof(u32));
+    }
+}
+
+void bs_flush_rect_screen(int id, u32 x, u32 y, u32 w, u32 h)
+{
+    if (id < 0 || id >= BS_MAX_SCREENS) return;
+    bs_screen_t *scr = &bs_screens[id];
     u32 *fb = get_framebuffer();
     if (!fb || !scr->buffer || !bs_pdw) return;
 

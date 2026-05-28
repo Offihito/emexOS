@@ -24,6 +24,7 @@ typedef struct {
 	u32 width;
 	u32 height;
 	u32 *buffer; // opt. buffering
+	//u32 *bg_buffer;
 } bs_screen_t;
 
 extern bs_screen_t bs_screens[BS_MAX_SCREENS];
@@ -47,6 +48,7 @@ u32 bs_backbuf_height(void);
 
 void bs_flush_rows(u32 y, u32 row_count);
 void bs_flush_rect(u32 x, u32 y, u32 w, u32 h);
+void bs_flush_rect_screen(int id, u32 x, u32 y, u32 w, u32 h);
 void bs_backbuf_flush_all(void);
 void bs_backbuf_clear(u32 color);
 void bs_clear_screen(int id, u32 color);
