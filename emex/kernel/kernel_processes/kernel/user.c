@@ -84,7 +84,7 @@ void uproc(void) {
 
 		    clear(BS1, 0xff000000);
 		    clear(BS2, 0xff000000);
-			clear(BS3, 0xffff0000);
+			clear(BS3, 0xff000000);
       		bs_backbuf_clear(0x00000000);
 
 	        uninit_bootscreen();
