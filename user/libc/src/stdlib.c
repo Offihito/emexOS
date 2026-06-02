@@ -63,6 +63,18 @@ long strtol(const char *s, char **end, int base) {
     return neg ? -v : v;
 }
 
+static unsigned int rng_state = 123456789;
+
+void srand(unsigned int seed)
+{
+    rng_state = seed;
+}
+
+int rand(void)
+{
+    rng_state = rng_state * 1103515245 + 12345;
+    return (int)((rng_state >> 16) & 0x7FFF);
+}
 
 double strtod(const char *nptr, char **endptr)
 {

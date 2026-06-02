@@ -7,7 +7,10 @@ void *realloc(void *ptr, size_t n);
 void free (void *ptr);
 
 void exit(int status) __attribute__((noreturn));
-void abort(void)       __attribute__((noreturn));
+void abort(void) __attribute__((noreturn));
+
+void srand(unsigned int seed);
+int rand(void);
 
 int atoi(const char *s);
 long atol(const char *s);

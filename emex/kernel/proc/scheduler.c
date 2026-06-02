@@ -1,137 +1,104 @@
 #include "scheduler.h"
-//#include "proc_manager.h"
+#include <kernel/multitasking/multitasking.h>
 #include <kernel/mem/lib/main.h>
 #include <kernel/mem/klime/klime.h>
 #include <kernel/communication/serial.h>
 
-// i literally only make this so usermode can work good...
+u64 scheduler_quantum_for_priority(u64 priority) {
+    if (priority == 0) priority = 1;
 
-/*#if ENABLE_ULIME
-scheduler_t *scheduler = NULL;
-//proc_manager_t *proc_mgr = NULL;
-#endif*/
+    u64 q = (priority * SCHED_BASE_QUANTUM) / 128;
 
+    if (q < SCHED_MIN_QUANTUM) q = SCHED_MIN_QUANTUM;
+    if (q > SCHED_MAX_QUANTUM) q = SCHED_MAX_QUANTUM;
 
-scheduler_t* scheduler_init(ulime_t *ulime, u64 quantum) {
+    return q;
+}
+
+scheduler_t* scheduler_init(ulime_t *ulime, u64 base_quantum)
+{
     if (!ulime || !ulime->klime) return NULL;
 
     scheduler_t *s = (scheduler_t*)klime_create(ulime->klime, sizeof(scheduler_t));
     if (!s) return NULL;
 
-    s->ulime = ulime;
-    s->quantum = quantum;
-    s->ticks = 0;
+    s->ulime         = ulime;
+    s->quantum       = (base_quantum > 0) ? base_quantum : SCHED_BASE_QUANTUM;
+    s->ticks         = 0;
+    s->last_idx      = -1;
+    s->round_counter = 0;
 
     return s;
 }
 
 void scheduler_set_quantum(scheduler_t *s, u64 quantum) {
     if (!s) return;
-    s->quantum = quantum;
+    s->quantum = (quantum > 0) ? quantum : SCHED_BASE_QUANTUM;
 }
 
-/*void sched_set_policy(sched_t *s, sched_policy_t policy) {
-    if (!s) return;
-    s->policy = policy;
-}
+int scheduler_pick_next(scheduler_t *s, void *mt_ptr, int current_idx)
+{
+    mt_t *mt = (mt_t*)mt_ptr;
+    if (!mt || mt->task_count == 0) return -1;
 
-void sched_set_timeslice(sched_t *s, u64 ticks) {
-    if (!s) return;
-    s->time_slice = ticks;
-}
+    int count = mt->task_count;
+    int start = (current_idx + 1) % count;
+    int i = start;
 
-// pick next process based on policy
-ulime_proc_t* sched_pick_next(sched_t *s) {
-    if (!s || !s->ulime) return NULL;
+    do
+    {
+        mt_task_t *t = &mt->tasks[i];
 
-    ulime_proc_t *current = s->ulime->ptr_proc_curr;
-    ulime_proc_t *next = NULL;
-
-    if (s->policy == SCHED_RR) {
-        // round robin
-        next = current ? current->next : s->ulime->ptr_proc_list;
-        if (!next) next = s->ulime->ptr_proc_list;
-
-        // find first ready
-        ulime_proc_t *start = next;
-        while (next && next->state != PROC_READY) {
-            next = next->next;
-            if (!next) next = s->ulime->ptr_proc_list;
-            if (next == start) break;
+        if (!t->valid || !t->proc) {
+            i = (i + 1) % count;
+            continue;
         }
 
-    } else {
-        // find highest priority ready process
-        ulime_proc_t *p = s->ulime->ptr_proc_list;
-        u64 max_prio = 0;
+        u64 state = t->proc->state;
+        if (state == PROC_READY || state == PROC_CREATED || state == PROC_RUNNING) {
+            return i;
+        }
 
-        while (p) {
-            if (p->state == PROC_READY && p->priority > max_prio) {
-                max_prio = p->priority;
-                next = p;
+        i = (i + 1) % count;
+    } while (i != start);
+
+    // second pass: if nothing ready, check if anything is just blocked
+    // but has been waiting way too long (starvation prevention)
+    // we skip this for ZOMBIE states though, dead is dead
+    for (int j = 0; j < count; j++) {
+        mt_task_t *t = &mt->tasks[j];
+        if (!t->valid || !t->proc) continue;
+        if (t->proc->state == PROC_ZOMBIE) continue;
+
+        // if its blocked but not zombie, give it a shot
+        // the syscall that blocked it might have been resolved by now
+        if (t->proc->state == PROC_BLOCKED) {
+            // only do this every STARVATION_LIMIT rounds so we dont spam
+            if (s->round_counter % SCHED_STARVATION_LIMIT == 0) {
+                return j;
             }
-            p = p->next;
         }
     }
 
-    return (next && next->state == PROC_READY) ? next : NULL;
+    return -1;
 }
-
-void sched_run(sched_t *s) {
-    if (!s) return;
-
-    ulime_proc_t *next = sched_pick_next(s);
-    if (!next) return;
-
-    ulime_proc_t *current = s->ulime->ptr_proc_curr;
-
-    // switch if different
-    if (next != current) {
-        if (current && current->state == PROC_RUNNING) {
-            current->state = PROC_READY;
-        }
-
-        next->state = PROC_RUNNING;
-        s->ulime->ptr_proc_curr = next;
-        s->ticks = 0;
-
-        printf("[SCHED] switch to pid=%lu (%s)\n", next->pid, next->name);
-    }
-}
-*/
 
 void scheduler_tick(scheduler_t *s) {
     if (!s) return;
 
     s->ticks++;
 
-    // prempt if quantum expired
     if (s->ticks >= s->quantum) {
         ulime_schedule(s->ulime);
         s->ticks = 0;
+        s->round_counter++;
     }
 }
 
 void scheduler_yield(scheduler_t *s) {
     if (!s) return;
 
-    ulime_schedule(s->ulime);
+    // reset ticks so we dont immediately preempt after resuming
     s->ticks = 0;
+    ulime_schedule(s->ulime);
 }
-
-/*void scheduler_stats(scheduler_t *s) {
-    if (!s) return;
-
-    printf("\n[SCHED] stats:\n");
-    printf("  policy: %s\n", s->policy == SCHED_RR ? "RR" : "PRIO");
-    printf("  time_slice: %lu\n", s->time_slice);
-    printf("  ticks: %lu\n", s->ticks);
-
-    if (s->ulime->ptr_proc_curr) {
-        printf("  current: pid=%lu (%s)\n",
-               s->ulime->ptr_proc_curr->pid,
-               s->ulime->ptr_proc_curr->name);
-    }
-    printf("\n");
-}
-*/

@@ -26,19 +26,23 @@ else
 	elog("warning: stinf not found")
 endif
 
-wait 3
+wait 150
 
 if gui
-	//print("gui variable found")
+	print("gui variable found")
 	exec -bg desktop
 	//exec -bg bg_test
 	//exec -bg bg_test
 
-	exec login_path
-	exec -bg sysinfo
-	//exec -bg filemanager
-	exec -f"ep" gshell_path
+	wait 50
+		exec login_path
+	wait 10
+
+	exec  -bg  sysinfo
+	exec  -bg  /emr/system/bin/cube.elf
+	exec  -bg  /emr/system/bin/neroapp.elf
+	exec  -bg  -f"ep" gshell_path
 else
-	//print("gui variable NOT found")
+	print("gui variable NOT found")
 	exec shell_path
 endif

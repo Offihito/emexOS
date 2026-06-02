@@ -23,7 +23,7 @@ ASFLAGS ?= -f elf64
 
 # Directories and files
 SRC_DIR := emex
-USERSPACE_DIR = user/
+USERSPACE_DIR = user
 USERSPACE_BUILD = build/userspace
 BUILD_DIR := build
 DISK_DIR := dsk
