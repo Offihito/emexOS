@@ -1,5 +1,5 @@
 #include "scalls.h"
-#include <kernel/cpu/poweroff.h>
+#include <kernel/hal/poweroff.h>
 #include <kernel/user/ulime.h>
 #include <drivers/ps2/mouse/mouse.h>
 

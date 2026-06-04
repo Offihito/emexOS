@@ -17,7 +17,7 @@ var shell_path  = (ep: "/emr/system/shell.emx")
 
 print("succesfully jumped into userspace...")
 
-if stinf
+if  stinf
 	print("stinf found... loading...")
 	exec stinf
 	//exec /emr/system/system.emx/initd.elf
@@ -26,21 +26,23 @@ else
 	elog("warning: stinf not found")
 endif
 
-wait 150
+wait    150
 
-if gui
+if  gui
 	print("gui variable found")
-	exec -bg desktop
-	//exec -bg bg_test
-	//exec -bg bg_test
+	exec  -bg desktop
+	//exec  -bg bg_test
+	//exec  -bg bg_test
 
-	wait 50
-		exec login_path
-	wait 10
+	wait    50
+
+	exec login_path
+
+	wait    10
 
 	exec  -bg  sysinfo
-	exec  -bg  /emr/system/bin/cube.elf
-	exec  -bg  /emr/system/bin/neroapp.elf
+	//exec  -bg  /emr/system/bin/cube.elf
+	//exec  -bg  /emr/system/bin/neroapp.elf
 	exec  -bg  -f"ep" gshell_path
 else
 	print("gui variable NOT found")

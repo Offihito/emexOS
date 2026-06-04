@@ -1,4 +1,4 @@
-#include "cpu.h"
+#include <kernel/cpu/cpu.h>
 
 //
 // MADE BY @msaid5860

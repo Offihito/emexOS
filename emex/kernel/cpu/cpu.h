@@ -2,6 +2,8 @@
 #define CPU_H
 
 #include <types.h>
+#include <kernel/arch/x86_64/halt.h>
+#include <kernel/arch/x86_64/poweroff.h>
 
 // CPUFF
 #define CPU_FEATURE_FPU     (1 << 0)
@@ -78,12 +80,5 @@ const char* cpu_get_vendor(void);
 const char* cpu_get_brand(void);
 cpu_info_t* cpu_get_info(void);
 int cpu_has_feature(u32 feature);
-
-void cli(void);
-void sti(void);
-__attribute__((noreturn)) void chalt(void); // Fixed typo, should be chalt not halt
-__attribute__((noreturn)) void idle(void);
-void wfi(void);
-void nop(void);
 
 #endif

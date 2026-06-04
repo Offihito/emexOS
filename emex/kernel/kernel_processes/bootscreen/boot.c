@@ -385,6 +385,8 @@ void init_bootscreen(void)
     bs_set_region(BS4, 0,    0, fw,        fh);
 
     bs_switch(BS2);
+    //this just "early draws" the informations but the cpu wont be shown,
+    // after the cpu was detected it imediatly overwrites it
     bs2_draw_info();
     //print("test", white());
     bs_switch(BS1);

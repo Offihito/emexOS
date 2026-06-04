@@ -2,7 +2,7 @@
 #define SLOTH
 
 #include <kernel/file_systems/vfs/vfs.h>
-#include <kernel/cpu/poweroff.h>
+#include <kernel/arch/x86_64/poweroff.h>
 
 #define SLOT_PATH "/boot/activeslot.cfg"
 

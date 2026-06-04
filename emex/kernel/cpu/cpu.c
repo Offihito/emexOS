@@ -5,11 +5,11 @@
 #include <kernel/graph/theme.h>
 
 #include <kernel/arch/x86_64/exceptions/panic.h>
-#include <kernel/arch/amd64/amd64.h>
+//#include <kernel/arch/x86_64/amd64/amd64.h>
 
 static cpu_info_t cpu_info;
-static amd64_info_t amd64_info;
-static int is_amd_cpu = 0;
+//static amd64_info_t amd64_info;
+//static int is_amd_cpu = 0;
 
 static void cpuid(u32 code, u32 *a, u32 *b, u32 *c, u32 *d) {
     __asm__ volatile("cpuid"
@@ -27,7 +27,6 @@ void cpu_detect(void) {
     //BOOTUP_PRINT("[CPU] ", GFX_GRAY_70);
 
     memset(&cpu_info, 0, sizeof(cpu_info_t));
-    memset(&amd64_info, 0, sizeof(amd64_info_t));
     u32 eax, ebx, ecx, edx;
 
     // Get vendor string
@@ -38,7 +37,7 @@ void cpu_detect(void) {
     cpu_info.vendor[12] = '\0';
 
     // check if AMD CPU (AuthenticAMD)
-    is_amd_cpu = (ebx == 0x68747541 && edx == 0x69746E65 && ecx == 0x444D4163);
+    //is_amd_cpu = (ebx == 0x68747541 && edx == 0x69746E65 && ecx == 0x444D4163);
 
     // get basic features
     cpuid(1, &eax, &ebx, &ecx, &edx);
@@ -108,8 +107,9 @@ void cpu_detect(void) {
         }
     }
 
+    // and yes ik that after disabling/deleting all amd features tinyGL doesnt work anymore but i will fix that soon, trust me :3
     // AMD-specific detection
-    if (is_amd_cpu) {
+    /*if (is_amd_cpu) {
         cpuid(0x80000001, &eax, &ebx, &ecx, &edx);
         cpu_info.has_long_mode = (edx & (1 << 29)) != 0;
         cpu_info.has_nx = (edx & (1 << 20)) != 0;
@@ -119,7 +119,7 @@ void cpu_detect(void) {
         }
 
         // run full AMD64 detection
-        amd64_detect(&amd64_info);
+        //amd64_detect(&amd64_info);
 
         // use AMD-specific cache info
         cpu_info.cache_l1d = amd64_info.l1_data_cache_kb;
@@ -133,8 +133,8 @@ void cpu_detect(void) {
         if (cpu_info.threads == 0) {
             cpu_info.threads = cpu_info.cores;
         }
-    }
-    else if (cpu_info.vendor[0] == 'G') { // GenuineIntel
+    }*/
+    if (cpu_info.vendor[0] == 'G') { // GenuineIntel
         cpuid(4, &eax, &ebx, &ecx, &edx);
 
         // L1 data cache
@@ -199,11 +199,11 @@ void cpu_detect(void) {
     BOOTUP_PRINT("\n", white());
 
     // amd-specfific
-    if (is_amd_cpu) {
+    /*if (is_amd_cpu) {
         BOOTUP_PRINT("\n", white());
         amd64_print_info(&amd64_info);
         amd64_init_optimizations();
-    }
+    }*/
 }
 
 const char* cpu_get_vendor(void) {
@@ -217,14 +217,14 @@ const char* cpu_get_brand(void) {
 cpu_info_t* cpu_get_info(void) {
     return &cpu_info;
 }
-
+/*
 amd64_info_t* cpu_get_amd64_info(void) {
     return is_amd_cpu ? &amd64_info : NULL;
 }
 
 int cpu_is_amd(void) {
     return is_amd_cpu;
-}
+}*/
 
 int cpu_has_feature(u32 feature) {
     // check on EDX features

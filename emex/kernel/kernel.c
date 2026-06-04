@@ -22,9 +22,9 @@
 
 // CPU
 #include <kernel/cpu/cpu.h>
-#include <kernel/cpu/acpi/acpi.h>
 #include <kernel/pci/pci.h>
 #if X64 == 1
+	#include <kernel/arch/x86_64/acpi/acpi.h>
     #include <kernel/arch/x86_64/gdt/gdt.h>
     #include <kernel/arch/x86_64/idt/idt.h>
     #include <kernel/arch/x86_64/exceptions/panic.h>
@@ -219,11 +219,18 @@ void _start(void)
 
         fs_system_init(klime);
     }
-    cpu_detect();
-    #if X64 == 1
+
+    hal: {
+	    cpu_detect();
         gdt_init();
         idt_init();
-    #endif
+    }
+
+    bs_switch(BS2);
+    bs2_draw_info();
+    //print("test", white());
+    bs_switch(BS1);
+
     #if ENABLE_ULIME
         if (ulime) {
             scheduler = scheduler_init(ulime, SCHEDQUANT);
@@ -261,6 +268,7 @@ void _start(void)
             _init_syscalls_table(ulime);
         }
     #endif
+
     init_acpi(); // Init ACPI
 
     u32 freq = 1000;
