@@ -12,8 +12,8 @@ var filemanager = ("/emr/system/fm.elf")
 var bg_test     = ("/emr/system/sinfo.elf")
 var bg_test2    = ("/emr/system/libraries/cursor.elf")
 var login_path  = ("/emr/system/login.elf")
-var gshell_path = (ep: "/emr/system/terminal.emx")
-var shell_path  = (ep: "/emr/system/shell.emx")
+var gshell_path = ("/emr/system/terminal.emx/app.elf")
+var shell_path  = ("/emr/system/shell.emx/app.elf")
 
 print("succesfully jumped into userspace...")
 
@@ -43,7 +43,7 @@ if  gui
 	exec  -bg  sysinfo
 	//exec  -bg  /emr/system/bin/cube.elf
 	//exec  -bg  /emr/system/bin/neroapp.elf
-	exec  -bg  -f"ep" gshell_path
+	exec  -bg  gshell_path
 else
 	print("gui variable NOT found")
 	exec shell_path
