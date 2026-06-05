@@ -15,7 +15,6 @@
 #include <config/user_config.h>
 
 // System services
-#include <kernel/kernelslot/slot.h>
 #include <kernel/inits/limine/cmd.h>
 #include <kernel/services/installer/install.h>
 
@@ -280,15 +279,9 @@ void _start(void)
     //pci will get really useful with xhci/other usb
 
     //BOOTUP_PRINT("\n", GFX_WHITE);
-
-    kernel_slot_ss: {
-        dualslotvalidating();
-
-    }
     // initialize Limine modules
     limine_module_ss: limine_modules_init(); {
         initrd_load();
-        dualslotvalidating();
         //keymaps_load();
         //logos_load();
         //users_load();
