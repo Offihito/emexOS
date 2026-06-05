@@ -16,8 +16,6 @@
 
 // System services
 #include <kernel/inits/limine/cmd.h>
-#include <kernel/services/installer/install.h>
-
 
 // CPU
 #include <kernel/cpu/cpu.h>
@@ -296,8 +294,6 @@ void _start(void)
                 log("[DISK]", "no valid partition found\n", warning);
                 log("[DISK]", "run 'install' to set up the disk\n", warning);
             }
-
-            installer_run();
 
             #if ENABLE_FAT32 == 1
                 log("[FAT32]", "mounting FAT32 file system\n", d);
