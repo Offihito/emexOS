@@ -45,9 +45,7 @@
 #include <kernel/devices/input/kbd.h>
 #include <kernel/devices/input/mouse0.h>
 #include <kernel/devices/net/eth0.h>
-#include <kernel/devices/tty/tty0.h>
-#include <kernel/devices/tty/tty.h>
-#include <kernel/devices/tty/tty1.h>
+#include <kernel/devices/vt/vt.h>
 #include <kernel/devices/random/urandom.h>
 #include <kernel/devices/random/random.h>
 
@@ -359,10 +357,7 @@ void _start(void)
         module_register(&kbd_dev_module);
         module_register(&mouse0_module);
         module_register(&eth0_module);
-        module_register(&tty0_module);{    tty_set_active(0); }
-        module_register(&tty1_module);
-        module_register(&ptmx_module);
-        module_register(&pts0_module);
+        //module_register(&vt_module);
         module_register(&urandom_module);
         module_register(&random_module);
 

@@ -8,9 +8,11 @@
 #include <kernel/devices/null/null.h>
 #include <kernel/devices/random/random.h>
 #include <kernel/devices/random/urandom.h>
-#include <kernel/devices/tty/tty0.h>
 #include <kernel/devices/zero/zero.h>
-#include <kernel/devices/pty/pty.h>
+
+/*
+ * version numbers probably dont get updated
+ */
 
 #define ATANAME "dev_atahdd0"
 #define ATAPATH "/dev/hda"
@@ -33,6 +35,10 @@
 #define FB0PATH "/dev/fb0"
 #define FB0UNIVERSAL VERSION_NUM(0, 0, 0, 0) // always 0.0.0.0
 
+#define VTNAME "dev_vt"
+#define VTPATH "/dev/vt"
+#define VTUNIVERSAL VERSION_NUM(0, 1, 0, 0)
+
 #define ZERNAME "dev_zero"
 #define ZERPATH "/dev/zero"
 #define ZERUNIVERSAL VERSION_NUM(0, 0, 0, 0) // always 0.0.0.0
@@ -41,14 +47,6 @@
 #define NULPATH "/dev/null"
 #define NULUNIVERSAL VERSION_NUM(0, 0, 0, 0) // always 0.0.0.0
 
-// multi TTYs
-#define TTY0NAME "dev_tty0"
-#define TTY0PATH "/dev/tty0"
-#define TTY0UNIVERSAL VERSION_NUM(0, 0, 1, 2)
-#define TTY1NAME "dev_tty1"
-#define TTY1PATH "/dev/tty1"
-#define TTY1UNIVERSAL VERSION_NUM(0, 0, 1, 2)
-
 #define URNDNAME "dev_urandom"
 #define URNDPATH "/dev/urandom"
 #define URNDUNIVERSAL VERSION_NUM(0, 0, 1, 0)
@@ -56,11 +54,3 @@
 #define RNDNAME "dev_random"
 #define RNDPATH "/dev/random"
 #define RNDUNIVERSAL VERSION_NUM(0, 0, 1, 0)
-
-// PTY (pseudo-terminal)
-#define PTMXNAME "dev_ptmx"
-#define PTMXPATH "/dev/ptmx"
-#define PTMXUNIVERSAL VERSION_NUM(0, 1, 0, 0)
-#define PTS0NAME "dev_pts0"
-#define PTS0PATH "/dev/pts/0"
-#define PTS0UNIVERSAL VERSION_NUM(0, 1, 0, 0)

@@ -1,6 +1,7 @@
 #include "vad.h"
 #include "exui.h"
 #include <fcntl.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -220,26 +221,54 @@ int vad_load(const char *path, vad_image_t *img)
     img->pixels = NULL;
     img->width = 0;
     img->height = 0;
-    unsigned short w_le, h_le;
+
+    //unsigned short w_le, h_le;
+    unsigned char w_b, h_b;
+
+    printf("VAD: loading %s \n", path);
     int fd = open(path, O_RDONLY);
-    int w = (int)w_le;
-    int h = (int)h_le;
+    int w;
+    int h;
     char magic[4];
 
-    if (fd < 0) return -1;
+    if (fd < 0)
+    {
+    	printf("VAD: open failed\n");
+    	return -1;
+    }
 
     // will always be the start of a file
     if (_read_exact(fd, magic, 4) != 0) goto fail;
+    printf("VAD: magic: %c%c%c%c\n", magic[0], magic[1], magic[2], magic[3]);
+    printf("VAD: magic bytes: %d %d %d %d\n",
+        (int)magic[0], (int)magic[1],
+        (int)magic[2], (int)magic[3]);
     if (magic[0] != 'T' || magic[1] != 'G' ||
-        magic[2] != 'R' || magic[3] != 'V') goto fail;
+        magic[2] != 'R' || magic[3] != 'V') {
+        printf("VAD: magic mismatch! expected 84 71 82 86\n");
+        goto fail;
+    }
     /* example:
     TGRV((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
      */
 
     // dimensions
-    if (_read_exact(fd, &w_le, 2) != 0) goto fail;
-    if (_read_exact(fd, &h_le, 2) != 0) goto fail;
+    //if (_read_exact(fd, &w_le, 2) != 0) goto fail;
+    //if (_read_exact(fd, &h_le, 2) != 0) goto fail;
 
+    //w = (int)w_le;
+    //h = (int)h_le;
+
+    if (_read_exact(fd, &w_b, 1) != 0) goto fail;
+    if (_read_exact(fd, &h_b, 1) != 0) goto fail;
+
+    w = (int)w_b;
+    h = (int)h_b;
+
+    printf("VAD: raw w_b = 0x%04X\n", w_b);
+    printf("VAD: raw h_le = 0x%04X\n", h_b);
+
+    printf("VAD: size: %dx%d\n", w, h);
     if (w <= 0 || h <= 0 || w > 1024 || h > 1024) goto fail;
 
     //alocate
@@ -260,9 +289,11 @@ int vad_load(const char *path, vad_image_t *img)
     return 0;
 
 fail2:
+	printf("fail2\n");
     free(img->indices); img->indices = NULL;
     free(img->pixels); img->pixels = NULL;
 fail:
+	printf("fail\n");
     close(fd);
     return -1;
 }

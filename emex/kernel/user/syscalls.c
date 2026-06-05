@@ -89,68 +89,6 @@ static ulime_proc_t *find_proc_by_cr3(ulime_t *u, u64 cr3) {
     return NULL;
 }
 
-static u32 ansi_fg_color = SCWRITE;
-static u32 ansi_code_to_color(int code) {
-    switch (code) {
-        case  0: return 0xFFFFFFFF; // reset (white)
-        case 30: return 0xFF111111; // black
-        case 31: return 0xFFFF5555; // red
-        case 32: return 0xFF55FF55; // green
-        case 33: return 0xFFFFFF55; // yellow
-        case 34: return 0xFF5555FF; // blue
-        case 35: return 0xFFFF55FF; // magenta
-        case 36: return 0xFF55FFFF; // cyan
-        case 37: return 0xFFFFFFFF; // white
-        case 90: return 0xFF888888; // gray
-        case 91: return 0xFFFF8888; // bright red
-        case 92: return 0xFF88FF88; // bright green
-        case 93: return 0xFFFFFF88; // bright yellow
-        case 94: return 0xFF8888FF; // bright blue
-        case 95: return 0xFFFF88FF; // bright magenta
-        case 96: return 0xFF88FFFF; // bright cyan
-        case 97: return 0xFFFFFFFF; // bright white
-        default: return 0xFFFFFFFF;
-    }
-}
-
-typedef enum {
-    ANSI_STATE_NORMAL = 0,
-    ANSI_STATE_ESC,// saw \033
-    ANSI_STATE_CSI,// saw \033[
-} ansi_state_t;
-
-static ansi_state_t ansi_state = ANSI_STATE_NORMAL;
-static int          ansi_param = 0;
-
-static void ansi_write_char(char c) {
-    char tmp[2] = {c, '\0'};
-    switch (ansi_state) {
-        case ANSI_STATE_NORMAL:
-            if (c == '\033') { ansi_state = ANSI_STATE_ESC; }
-            else { cprintf(tmp, ansi_fg_color); }
-            break;
-        case ANSI_STATE_ESC:
-            if (c == '[') { ansi_state = ANSI_STATE_CSI; ansi_param = 0; }
-            else {cprintf("\033", ansi_fg_color); cprintf(tmp, ansi_fg_color); ansi_state = ANSI_STATE_NORMAL;}
-            break;
-        case ANSI_STATE_CSI:
-            if (c >= '0' && c <= '9') {
-                ansi_param = ansi_param * 10 + (c - '0');
-            } else if (c == 'm') {
-                ansi_fg_color = ansi_code_to_color(ansi_param);
-                ansi_param = 0;
-                ansi_state = ANSI_STATE_NORMAL;
-            } else if (c == ';') {
-                ansi_fg_color = ansi_code_to_color(ansi_param);
-                ansi_param = 0;
-            } else {
-                ansi_param = 0;
-                ansi_state = ANSI_STATE_NORMAL;
-            }
-            break;
-    }
-}
-
 // syscall handlers
 u64 scall_write(ulime_proc_t *proc, u64 fd, u64 buf, u64 count) {
     (void)proc;
@@ -161,18 +99,16 @@ u64 scall_write(ulime_proc_t *proc, u64 fd, u64 buf, u64 count) {
 
     if (fd != 1 && fd != 2) return (u64)-1;
 
-    // lazy-open /dev/tty0
-    static int tty_fd = -1;
-    if (tty_fd < 0)
+    char tmp[2];
+
+    for (u64 i = 0; i < count; i++)
     {
-        tty_fd = fs_open(TTY0PATH, O_WRONLY);
-        if (tty_fd < 0) {
-            const char *s = (const char *)buf;
-            for (u64 i = 0; i < count; i++) tty0_write_char(s[i]);
-            return count;
-        }
+        tmp[0] = ((char*)buf)[i];
+        tmp[1] = '\0';
+        printf("%s", tmp);
     }
-    return (u64)fs_write(tty_fd, (const void *)buf, (size_t)count);
+
+    return count;
 }
 
 u64 scall_exit(ulime_proc_t *proc, u64 exit_code, u64 arg2, u64 arg3)
@@ -446,40 +382,11 @@ u64 scall_execve(ulime_proc_t *proc, u64 path_ptr, u64 argv_ptr, u64 arg3)
 u64 scall_read(ulime_proc_t *proc, u64 fd, u64 buf, u64 count)
 {
     (void)proc;
-    if (!is_valid_user_ptr_range(buf, count)) return 0;
+    (void)fd;
+    (void)buf;
+    (void)count;
 
-    // (urandom, zero, files, ...)
-    if (fd >= 3)
-        return (u64)fs_read((int)fd, (void *)buf, (size_t)count);
-
-    // fd 0 stdin to tty0
-    if (fd != 0) return (u64)-1;
-
-    static int tty_fd = -1;
-    if (tty_fd < 0)
-    {
-        tty_fd = fs_open(TTY0PATH, O_RDONLY);
-        if (tty_fd < 0) {
-            printf("[SYSCALL] read: cannot open " TTY0PATH "\n");
-            return (u64)-1;
-        }
-    }
-    ulime_proc_t *cur = find_proc_by_cr3(g_ulime, user_cr3);
-    if (cur) cur->state = PROC_BLOCKED;
-    u64 result = (u64)fs_read(tty_fd, (void *)buf, (size_t)count);
-    if (cur) {
-        cur->state = PROC_RUNNING;
-        extern mt_t *mt;
-        if (mt) {
-            for (int i = 0; i < mt->task_count; i++) {
-                if (mt->tasks[i].proc == cur) {
-                    mt->current_idx = i;
-                    break;
-                }
-            }
-        }
-    }
-    return result;
+    return 0;
 }
 
 u64 scall_getpid(ulime_proc_t *proc, u64 arg1, u64 arg2, u64 arg3) {
@@ -605,16 +512,10 @@ u64 scall_ioctl(ulime_proc_t *proc, u64 fd, u64 request, u64 arg_ptr)
         }
     }
 
-    // tty ioctl (fd 0, 1, 2)
-    if (fd <= 2) {
-        switch ((int)request) {
-            case 0: tty0_set_echo_mode(0); return 0; // TTY_ECHO
-            case 1: tty0_set_echo_mode(1); return 0; // TTY_NOECHO
-            case 2: tty0_set_echo_mode(2); return 0; // TTY_MASKECHO
-            case 3: tty0_set_echo_mode(3); return 0; // TTY_RAW
-            default: return (u64)-1;
-        }
-    }
+    /*TODO:
+     * vt
+     */
+    if (fd <= 2) return 0;
 
     return (u64)-1;
 }

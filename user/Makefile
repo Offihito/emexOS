@@ -4,6 +4,7 @@ all:
 	@$(MAKE) -C libs/libfont
 	@$(MAKE) -C libs/libdesktop
 	@$(MAKE) -C libs/eXui
+	@$(MAKE) -C libs/libvad
 	@$(MAKE) -C libs/tinygl
 	@$(MAKE) -C libs/libjson
 	@$(MAKE) -C libs/libcss
@@ -46,6 +47,7 @@ clean:
 	@$(MAKE) -C libs/libfont clean
 	@$(MAKE) -C libs/libdesktop clean
 	@$(MAKE) -C libs/eXui clean
+	@$(MAKE) -C libs/libvad clean
 	@$(MAKE) -C libs/tinygl clean
 	@$(MAKE) -C libs/libjson clean
 	@$(MAKE) -C libs/libcss clean

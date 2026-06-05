@@ -150,7 +150,8 @@ int cpio_extract_to_vfs(const u8 *data, u64 size, const char *base_path)
     print("\n", white());
     log("[CPIO]", "reading archive...\n", d);
 
-    while (staged < CPIO_MAX_ENTRIES) {
+    while (staged < CPIO_MAX_ENTRIES)
+    {
         int rc = cpio_iter_next(&iter, &entry);
         if (rc == CPIO_ERR_EOF) break;
         if (rc != CPIO_OK) { log("[CPIO]", "parse error\n", error); return rc; }

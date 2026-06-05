@@ -6,8 +6,6 @@
 #include <kernel/packages/emex/emex.h>
 
 #include <kernel/mem/memlog.h>
-
-#include <kernel/devices/pty/pty.h>
 #include <kernel/file_systems/vfs/vfs.h>
 
 
@@ -16,48 +14,13 @@
 //mod
 //#define LOGINLOCATE "/emr/bin/login.elf"
 
-
-static void setup_stdio(void)
+void uproc(void)
 {
-    pty_init();
-    int pty_idx = pty_alloc();
-    if (pty_idx < 0) {
-        log("[INIT]", "WARN: pty_alloc failed\n", warning);
-    }
-
-    int tty_fd = fs_open("/dev/tty0", O_RDWR);
-    if (tty_fd >= 0) {
-        fs_file *f = fs_get_file(tty_fd);
-        if (f) fs_set_fd(0, f); /* stdin */
-    }
-
-    int pts_fd = fs_open("/dev/pts/0", O_RDWR);
-    if (pts_fd >= 0) {
-        fs_file *f = fs_get_file(pts_fd);
-        if (f) {
-            fs_set_fd(1, f);
-            fs_set_fd(2, f);
-        }
-        log("[INIT]", "stdio: fd0->tty0, fd1/2->pts/0\n", d);
-    } else {
-        if (tty_fd >= 0) {
-            fs_file *f = fs_get_file(tty_fd);
-            if (f) {
-                fs_set_fd(1, f);
-                fs_set_fd(2, f);
-            }
-        }
-        log("[INIT]", "stdio: fd0/1/2->tty0 (PTY fallback)\n", warning);
-    }
-}
-
-void uproc(void) {
     #if ENABLE_ULIME
         if (!proc_mgr || !ulime) {
             log("[INIT]", "proc_mgr or ulime not ready\n", error);
             return;
         }
-        setup_stdio();
 
         log("[INIT]", "loading " SYSTEMLOCATE "...\n", d);
 
