@@ -1,3 +1,7 @@
+#pragma once
+
+#define BS_DEBUG 0
+
 // macros
 #if BOOTUP_VISUALS == 0 // verbose boot
     #define BOOTUP_PRINTF(fmt, ...) printf(fmt, ##__VA_ARGS__)

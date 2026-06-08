@@ -1,5 +1,7 @@
 #include "boot.h"
+#include "gfx.h"
 #include "print.h"
+#include <config/bootlogs.h>
 #include <kernel/communication/serial.h>
 #include <kernel/graph/graphics.h>
 #include <kernel/data/images/bmp.h>
@@ -33,6 +35,7 @@ static void bs_blit_screen(int id)
 {
     if (id < 0 || id >= BS_MAX_SCREENS) return;
     bs_screen_t *scr = &bs_screens[id];
+    if (!bs_screens[id].visible) return;
     u32 *fb = get_framebuffer();
     if (!fb || !scr->buffer || !bs_pdw) return;
 
@@ -57,6 +60,12 @@ void bs_init_screens(void)
 	u32 fw   = get_fb_width();
 	u32 fh   = get_fb_height();
 	u32 half = fw / 2;
+
+	//visibility
+	bs_screens[BS1].visible = 1;
+	bs_screens[BS2].visible = 1;
+	bs_screens[BS3].visible = 1;
+	bs_screens[BS4].visible = 1;
 
 	// BS1: left half
 	bs_screens[BS1].cursor_x = 0;
@@ -200,6 +209,8 @@ u32 bs_backbuf_height(void)
 void bs_flush_rows(u32 y, u32 row_count)
 {
     bs_screen_t *scr = bs_get_active();
+    if (!scr->visible) return;
+    //log("[BS]", "flush rows\n", d);
     u32 *fb = get_framebuffer();
     if (!fb || !scr->buffer || !bs_pdw) return;
 
@@ -224,6 +235,8 @@ void bs_flush_rows(u32 y, u32 row_count)
 void bs_flush_rect(u32 x, u32 y, u32 w, u32 h)
 {
     bs_screen_t *scr = bs_get_active();
+    if (!scr->visible) return;
+    //log("[BS]", "flush rect\n", d);
     u32 *fb = get_framebuffer();
     if (!fb || !scr->buffer || !bs_pdw) return;
 
@@ -306,6 +319,13 @@ void bs_backbuf_clear(u32 color)
 	bs_blit_screen(bs_active);
 }
 
+void bs_setpixel(bs_screen_t *scr, u32 lx, u32 ly, u32 color)
+{
+    if (!scr->buffer) return;
+    if (lx >= scr->width || ly >= scr->height) return;
+    scr->buffer[ly * scr->width + lx] = color;
+}
+
 // clear a specific screen to a color, never touches other screens
 void bs_clear_screen(int id, u32 color)
 {
@@ -375,6 +395,11 @@ void init_bootscreen(void)
     bs_init_screens();
     bs_logo_loaded = 0;
 
+    clear(BS1, 0xff000000);
+    clear(BS2, 0xff000000);
+	clear(BS3, 0xff000000);
+	clear(BS4, 0xff000000);
+
     u32 fw   = get_fb_width();
     u32 fh   = get_fb_height();
     u32 half = fw / 2;
@@ -384,11 +409,25 @@ void init_bootscreen(void)
     bs_set_region(BS3, 0,    0, fw,        fh);
     bs_set_region(BS4, 0,    0, fw,        fh);
 
-    bs_switch(BS2);
-    //this just "early draws" the informations but the cpu wont be shown,
-    // after the cpu was detected it imediatly overwrites it
-    bs2_draw_info();
-    //print("test", white());
+	//change in emex/config/bootlogs.h
+	#if BS_DEBUG == 1
+		bs_screens[BS1].visible = 1;
+		bs_screens[BS2].visible = 1;
+		bs_screens[BS3].visible = 1;
+		bs_screens[BS4].visible = 1;
+	    bs_switch(BS2);
+	    //this just "early draws" the informations but the cpu wont show up,
+	    // after the cpu was detected it imediatly overwrites it
+	    bs2_draw_info();
+	#else
+		bs_screens[BS1].visible = 0;
+		bs_screens[BS2].visible = 0;
+		bs_screens[BS3].visible = 1;
+		bs_screens[BS4].visible = 1;
+		bs_switch(BS4);
+	    loading_screen();
+    #endif
+
     bs_switch(BS1);
 
     bs_log_start(BS1);

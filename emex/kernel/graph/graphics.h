@@ -38,6 +38,15 @@ u32 get_font_scale(void);
 void draw_rect(u32 x, u32 y, u32 width, u32 height, u32 color);
 void draw_circle(u32 cx, u32 cy, u32 radius, u32 color);
 void draw_line(u32 x0, u32 y0, u32 x1, u32 y1, u32 color);
+void draw_rect_outline(u32 x, u32 y, u32 width, u32 height, u32 color);
+void draw_rect_both(
+    u32 x,
+    u32 y,
+    u32 width,
+    u32 height,
+    u32 fill_color,
+    u32 outline_color
+);
 
 // Font management
 void graphics_set_font_scale(u32 scale);

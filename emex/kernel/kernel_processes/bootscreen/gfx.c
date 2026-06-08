@@ -1,17 +1,14 @@
-#include "info.h"
+#include "gfx.h"
+
 #include "boot.h"
-#include "config.h"
 #include "print.h"
 
-#include <kernel/include/reqs.h>
-#include <kernel/graph/graphics.h>
-#include <kernel/graph/theme.h>
-#include <kernel/kernel_processes/fm/fm.h>
-#include <kernel/cpu/cpu.h>
-#include <kernel/graph/lib/string.h>
-#include <config/system.h>
-#include <types.h>
+#include "info.h"
 
+#include <kernel/graph/graphics.h>
+#include <kernel/include/reqs.h>
+
+//from info.c
 static struct limine_file *find_logo_module(void)
 {
     if (!module_request.response) return NULL;
@@ -35,15 +32,16 @@ static struct limine_file *find_logo_module(void)
     return NULL;
 }
 
-void bs2_draw_info(void)
+void loading_screen(void)
 {
+    bs_switch(BS4);
+
+    bs_clear_screen(BS4, 0xFF008080);
+
     int old = bs_active;
-    bs_active = BS2;
-    bs_screen_t *scr = &bs_screens[BS2];
+    bs_active = BS4;
+    bs_screen_t *scr = &bs_screens[BS4];
 
-    //print("bs2_draw_info", white());
-
-    // clear BS2 local buffer
     u32 len = scr->width * scr->height;
     if (scr->buffer) memset(scr->buffer, 0, len * sizeof(u32));
 
@@ -94,57 +92,32 @@ void bs2_draw_info(void)
     scr->cursor_x = 4;
     scr->cursor_y = text_y;
 
-    information_text: {
-    	f_setcontext(FONT_8X8_BOLD);
-    	print_to(BS2, "\n" KERNEL_BARENAME " " KERNEL_DEFRELEASE_NAME "\n", cyan());
-     	f_setcontext(FONT_8X8);
+    u32 w = bs_screens[BS4].width;
+    u32 h = bs_screens[BS4].height;
 
-     	print_to(BS2,  ARCH_TEXT "" KERNEL_ARCH "\n", white());
+    u32 box_w = 360;
+    u32 box_h = 80;
 
-        char inf[64];
-        str_copy(inf, "Framebuffer:\n");
-        str_append(inf, " \t Width:  ");
-        str_append_uint(inf, fb_width);
-        str_append(inf, "\n");
-        str_append(inf, " \t Height: ");
-        str_append_uint(inf, fb_height);
-        str_append(inf, "\n");
-        str_append(inf, " \t Pitch:  ");
-        str_append_uint(inf, fb_pitch);
-        str_append(inf, "\n");
-        str_append(inf, " \t adress: ");
-        str_append_uint(inf, (u64) framebuffer);
-        str_append(inf, "\n");
-        print_to(BS2, inf, GFX_WHITE);
+    u32 box_x = (w - box_w) / 2;
+    u32 box_y = (h - box_h) / 2;
 
-        cpu_info_t *info = cpu_get_info();
-        print_to(BS2, CPU_TEXT "" ,white());
-        print_to(BS2, "\n", white());
-        print_to(BS2, " - brand:   ", white());
-        print_to(BS2, cpu_get_brand(), white());
-        print_to(BS2, "\n", white());
-        print_to(BS2, " - vendor:  ", white());
-        print_to(BS2, cpu_get_vendor(), white());
-        print_to(BS2, "\n", white());
-        print_to(BS2, " - cores:   ", white());
-        printInt_to(BS2, info->cores, white());
-        print_to(BS2, "\n", white());
-        print_to(BS2, " - threads: ", white());
-        printInt_to(BS2, info->threads, white());
-        print_to(BS2, "\n", white());
-    }
+    draw_rect_both(
+        box_x,
+        box_y,
+        box_w,
+        box_h,
+        0xFFC0C0C0,
+        0xFF000000
+    );
 
+    bs_screens[BS4].cursor_x = box_x + 40;
+    bs_screens[BS4].cursor_y = box_y + 30;
 
+    print_to(
+        BS4,
+        "Loading emexOS...",
+        0xFFFFFFFF
+    );
 
-    //print_to(BS2, "mode: limine\n", white());
-
-    // flush BS2 to framebuffer
-    {
-        int saved = bs_active;
-        bs_active = BS2;
-        bs_flush_rect(0, 0, scr->width, scr->height);
-        bs_active = saved;
-    }
-
-    bs_active = old;
+    bs_backbuf_flush_all();
 }

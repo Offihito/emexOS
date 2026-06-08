@@ -9,7 +9,7 @@
 
 /*
  * Written by @msaid5860 for NullOS.
- * Modified to match emexOS.
+ * Modified to match emexOS. AND NOT OPTIMIZED FOR IT
  *
 */
 

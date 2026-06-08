@@ -5,6 +5,7 @@
 #include <kernel/data/images/bmp.h>
 
 #include "info.h"
+#include "gfx.h"
 
 extern kproc_t bootscreen_proc;
 
@@ -23,6 +24,7 @@ typedef struct {
 	u32 y;
 	u32 width;
 	u32 height;
+	int visible;
 	u32 *buffer; // opt. buffering
 	//u32 *bg_buffer;
 } bs_screen_t;
@@ -51,6 +53,7 @@ void bs_flush_rect(u32 x, u32 y, u32 w, u32 h);
 void bs_flush_rect_screen(int id, u32 x, u32 y, u32 w, u32 h);
 void bs_backbuf_flush_all(void);
 void bs_backbuf_clear(u32 color);
+void bs_setpixel(bs_screen_t *scr, u32 lx, u32 ly, u32 color);
 void bs_clear_screen(int id, u32 color);
 // probably not needed
 void print_to(int screen, const char *str, u32 color);

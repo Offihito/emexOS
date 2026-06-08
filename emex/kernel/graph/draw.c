@@ -61,3 +61,51 @@ void draw_line(u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
         }
     }
 }
+
+void draw_rect_outline(u32 x, u32 y, u32 width, u32 height, u32 color)
+{
+    draw_line(x, y, x + width - 1, y, color);
+    draw_line(x, y, x, y + height - 1, color);
+
+    draw_line(
+        x + width - 1,
+        y,
+        x + width - 1,
+        y + height - 1,
+        color
+    );
+
+    draw_line(
+        x,
+        y + height - 1,
+        x + width - 1,
+        y + height - 1,
+        color
+    );
+}
+
+void draw_rect_both(
+    u32 x,
+    u32 y,
+    u32 width,
+    u32 height,
+    u32 fill_color,
+    u32 outline_color
+)
+{
+    draw_rect(
+        x,
+        y,
+        width,
+        height,
+        fill_color
+    );
+
+    draw_rect_outline(
+        x,
+        y,
+        width,
+        height,
+        outline_color
+    );
+}

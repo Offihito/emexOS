@@ -45,9 +45,14 @@ void uproc(void)
 	        u32 half_w     = fw / 2;
 	        u32 half_h     = fh / 2;
 
+			bs_screens[BS1].visible = 1;
+			bs_screens[BS2].visible = 1;
+			bs_screens[BS3].visible = 1;
+			bs_screens[BS4].visible = 0;
 		    clear(BS1, 0xff000000);
 		    clear(BS2, 0xff000000);
 			clear(BS3, 0xff000000);
+			clear(BS4, 0xff000000);
       		bs_backbuf_clear(0x00000000);
 
 	        uninit_bootscreen();

@@ -344,12 +344,38 @@ void IntToString(int value, char *buffer)
     buffer[i] = '\0';
 }
 
+
+void print_to(int screen, const char *str, u32 color)
+{
+	#if BOOTUP_VISUALS == 0
+		int old = bs_active;
+		bs_active = screen;
+		string(str,color);
+		bs_active = old;
+	#endif
+}
+
+void printInt_to(int screen, int value, u32 color)
+{
+	#if BOOTUP_VISUALS == 0
+	    char buffer[12];
+	    IntToString(value, buffer);
+
+	    int old = bs_active;
+	    bs_active = screen;
+
+	    string(buffer, color);
+
+	    bs_active = old;
+    #endif
+}
+
 void printInt(int value, u32 color)
 {
 	#if BOOTUP_VISUALS == 0
 	    char buffer[12];
 	    IntToString(value, buffer);
-	    string(buffer, color);
+	    print_to(SCREENMODE, buffer, color);
 	#endif
 	//printf("%s", value);
 }
@@ -357,7 +383,7 @@ void printInt(int value, u32 color)
 void print(const char *str, u32 color)
 {
 	#if BOOTUP_VISUALS == 0
-    	string(str, color);
+    	print_to(SCREENMODE, str, color);
      //putchar('\n', color);
     #endif
     //printf("%s", str);
@@ -367,12 +393,4 @@ void reset_cursor(void)
 {
     bs_get_active()->cursor_x = 0;
     bs_get_active()->cursor_y = 0;
-}
-
-void print_to(int screen, const char *str, u32 color)
-{
-	int old = bs_active;
-	bs_active = screen;
-	string(str,color);
-	bs_active = old;
 }
