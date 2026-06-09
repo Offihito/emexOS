@@ -40,8 +40,8 @@ $(BUILD_DIR)/kernel.elf: $(SRC_DIR)/kernel/linker.ld $(OBJS)
 
 # Build userspace first
 userspace:
-	@$(MAKE) -C $(USERSPACE_DIR) clean
-	@$(MAKE) -C $(USERSPACE_DIR)
+#@$(MAKE) -C $(USERSPACE_DIR) clean
+#@$(MAKE) -C $(USERSPACE_DIR)
 
 buildgen:
 	@chmod +x tools/genbuild.sh

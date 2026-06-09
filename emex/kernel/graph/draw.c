@@ -1,38 +1,75 @@
 #include "graphics.h"
 //#include "draw.h"
+#include <kernel/kernel_processes/bootscreen/boot.h>
+
+
+static inline void draw_pixel(u32 x, u32 y, u32 color)
+{
+	bs_screen_t *scr = bs_get_active();
+
+	if (!scr) return;
+	if (x >= scr->width || y >= scr->height) return;
+
+	bs_setpixel(scr, x, y, color);
+}
 
 void draw_rect(u32 x, u32 y, u32 width, u32 height, u32 color)
 {
-    u32 pitch_dwords = fb_pitch / 4;
-    for (u32 dy = 0; dy < height; dy++) {
-        u32 *row = framebuffer + (y + dy) * pitch_dwords + x;
-        for (u32 dx = 0; dx < width; dx++) {
-            row[dx] = color;
+	bs_screen_t *scr = bs_get_active();
+
+	if (!scr || !scr->buffer) return;
+
+    for (u32 dy = 0; dy < height; dy++)
+    {
+        for (u32 dx = 0; dx < width; dx++)
+        {
+        	draw_pixel(x + dx, y + dy, color);
         }
     }
+
+    bs_flush_rect(x, y, width, height);
 }
 
 void draw_circle(u32 cx, u32 cy, u32 radius, u32 color)
 {
+	bs_screen_t *scr = bs_get_active();
+
+	if (!scr || !scr->buffer) return;
     for (u32 y = 0; y <= radius; y++)
     {
         for (u32 x = 0; x <= radius; x++)
         {
             if (x * x + y * y <= radius * radius)
             {
-                putpixel(cx + x, cy + y, color);
-                putpixel(cx - x, cy + y, color);
-                putpixel(cx + x, cy - y, color);
-                putpixel(cx - x, cy - y, color);
+                draw_pixel(cx + x, cy + y, color);
+                draw_pixel(cx - x, cy + y, color);
+                draw_pixel(cx + x, cy - y, color);
+                draw_pixel(cx - x, cy - y, color);
             }
         }
     }
+
+    bs_flush_rect(
+    	cx - radius,
+     	cy - radius,
+     	radius * 2,
+     	radius * 2
+    );
 }
 
 void draw_line(u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
 {
-    int dx = x1 - x0;
-    int dy = y1 - y0;
+	bs_screen_t *scr = bs_get_active();
+
+	if (!scr || !scr->buffer) return;
+
+	u32 ox0 = x0;
+	u32 oy0 = y0;
+	u32 ox1 = x1;
+	u32 oy1 = y1;
+
+    int dx = (int)x1 - (int)x0;
+    int dy = (int)y1 - (int)y0;
 
     if (dx < 0) dx = -dx;
     if (dy < 0) dy = -dy;
@@ -43,7 +80,7 @@ void draw_line(u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
 
     while (1)
     {
-        putpixel(x0, y0, color);
+        draw_pixel(x0, y0, color);
 
         if (x0 == x1 && y0 == y1)
             break;
@@ -60,6 +97,18 @@ void draw_line(u32 x0, u32 y0, u32 x1, u32 y1, u32 color)
             y0 += sy;
         }
     }
+
+    u32 min_x = (ox0 < ox1) ? ox0 : ox1;
+    u32 min_y = (oy0 < oy1) ? oy0 : oy1;
+    u32 max_x = (ox0 < ox1) ? ox0 : ox1;
+    u32 max_y = (oy0 < oy1) ? oy0 : oy1;
+
+    bs_flush_rect(
+     	min_x,
+      	min_y,
+       	(max_x - min_x) + 1,
+        (max_y - min_y) + 1
+    );
 }
 
 void draw_rect_outline(u32 x, u32 y, u32 width, u32 height, u32 color)
