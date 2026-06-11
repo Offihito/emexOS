@@ -122,6 +122,15 @@ void loading_screen(void)
     );
 
     draw_rect_both(
+        box_x - 1,
+        box_y - 1,
+        box_w + 2,
+        box_h + 2,
+        0xFF000000,
+        0xFF000000
+    );
+
+    draw_rect_both(
         box_x,
         box_y,
         box_w,

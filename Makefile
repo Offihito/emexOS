@@ -40,8 +40,8 @@ $(BUILD_DIR)/kernel.elf: $(SRC_DIR)/kernel/linker.ld $(OBJS)
 
 # Build userspace first
 userspace:
-#@$(MAKE) -C $(USERSPACE_DIR) clean
-#@$(MAKE) -C $(USERSPACE_DIR)
+	@$(MAKE) -C $(USERSPACE_DIR) clean
+	@$(MAKE) -C $(USERSPACE_DIR)
 
 buildgen:
 	@chmod +x tools/genbuild.sh
@@ -64,6 +64,7 @@ $(ISO): limine.conf $(LIMINE_TOOL) buildgen $(BUILD_DIR)/kernel.elf disk userspa
 	@cp $(BUILD_DIR)/kernel.elf $(ISODIR)/boot/kernel_a.elf
 	@cp $(BUILD_DIR)/kernel.elf $(ISODIR)/boot/kernel_b.elf
 	@cp $(DISK_DIR)/logo.bin $(ISODIR)/boot/logo.bin
+	@cp $(DISK_DIR)/load_desktop.bin $(ISODIR)/boot/load_desktop.bin
 	@cp $< $(ISODIR)/boot/limine/
 	@cp $(addprefix $(INCLUDE_DIR)/limine/limine-, bios.sys bios-cd.bin uefi-cd.bin) $(ISODIR)/boot/limine/
 	@cp $(addprefix $(INCLUDE_DIR)/limine/BOOT, IA32.EFI X64.EFI) $(ISODIR)/EFI/BOOT/
@@ -83,7 +84,6 @@ $(ISO): limine.conf $(LIMINE_TOOL) buildgen $(BUILD_DIR)/kernel.elf disk userspa
 	@cp -r $(USERSPACE_DIR)/apps/shell/shell.emx $(DISK_DIR)/rd/emr/system
 	@cp -r $(USERSPACE_DIR)/apps/terminal/terminal.emx $(DISK_DIR)/rd/emr/system
 	@cp -r $(USERSPACE_DIR)/apps/system/system.emx $(DISK_DIR)/rd/emr/system/
-	@cp -r $(USERSPACE_DIR)/apps/system/stinf/stinf.elf $(DISK_DIR)/rd/emr/system/system.emx
 	@cp -r $(USERSPACE_DIR)/apps/desktop/desktop.elf $(DISK_DIR)/rd/emr/system/
 	@cp -r $(USERSPACE_DIR)/apps/sysinfo/sysinfo.elf $(DISK_DIR)/rd/emr/system/
 	@cp -r $(USERSPACE_DIR)/apps/filemanager/fm.elf $(DISK_DIR)/rd/emr/system/

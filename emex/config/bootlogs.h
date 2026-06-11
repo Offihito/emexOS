@@ -2,7 +2,7 @@
 
 #define BS_DEBUG 0
 
-// macros
+//BOOTUP_VISUALS config
 #if BOOTUP_VISUALS == 0 // verbose boot
     #define BOOTUP_PRINTF(fmt, ...) printf(fmt, ##__VA_ARGS__)
     //--------------------------------------

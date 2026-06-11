@@ -5,108 +5,111 @@
 #define ARM64 0
 
 #if X86_64 == 1
-#define EXIT 60
+	#define EXIT 60
 
-#define WRITE 1
-#define WRITEV 20
-#define READ 0
-#define READV 19
+	#define WRITE 1
+	#define WRITEV 20
+	#define READ 0
+	#define READV 19
 
-// #define __GETPID  391
-#define GETPID 39 // # call_getpid;
-// #define __GETCWD  791
-#define GETCWD 79
+	// #define __GETPID  391
+	#define GETPID 39 // # call_getpid;
+	// #define __GETCWD  791
+	#define GETCWD 79
 
-#define GETPPID 110
-#define GETTID 186
+	#define GETPPID 110
+	#define GETTID 186
 
-#define BRK 12
-#define KILL 62
+	#define BRK 12
+	#define KILL 62
 
-#define OPEN 2
-#define CLOSE 3
+	#define OPEN 2
+	#define CLOSE 3
 
-#define STAT 4
-// #define FSTAT       5
-// #define LSTAT       6
+	#define STAT 4
+	// #define FSTAT       5
+	// #define LSTAT       6
 
-#define FORK 57
-#define VFORK 58
-#define EXECVE 59
+	#define FORK 57
+	#define VFORK 58
+	#define EXECVE 59
 
-#define GETDENTS 78 // list directory entries (path, buf, max)
-#define CHDIR 80
-#define MKDIR 83
-#define FCHDIR 133
+	#define GETDENTS 78 // list directory entries (path, buf, max)
+	#define CHDIR 80
+	#define MKDIR 83
+	#define FCHDIR 133
 
-#define UNLINK 87
-#define IOCTL 16
-#define MMAP 9
-#define MUNMAP 11
-#define FTRUNCATE 77
+	#define UNLINK 87
+	#define IOCTL 16
+	#define MMAP 9
+	#define MUNMAP 11
+	#define FTRUNCATE 77
 
-#define MQ_OPEN 240
-#define MQ_UNLINK 241
-#define MQ_SEND 242
-#define MQ_RECV 243
+	#define MQ_OPEN 240
+	#define MQ_UNLINK 241
+	#define MQ_SEND 242
+	#define MQ_RECV 243
 
-#define WAITPID 61
+	#define WAITPID 61
 
-#define GETUID 144
-#define GETGID 155
+	#define GETUID 144
+	#define GETGID 155
 
-#define SHM_DESTROY 245
+	#define SHM_DESTROY 245
 
-// emex specific
-#define EMXREBOOT 169
-#define EMXSYSINFO 170
+	// emex specific
+	#define EMXREBOOT   169
+	#define EMXSYSINFO  170
+#elif EMEX64 == 1
+	// emex specific
+	#define EMXREBOOT   169
+	#define EMXSYSINFO  170
 #elif ARM64 == 1
-#define EXIT 93
+	#define EXIT 93
 
-#define WRITE 64
-#define WRITEV 66
-#define READ 63
-#define READV 65
+	#define WRITE 64
+	#define WRITEV 66
+	#define READ 63
+	#define READV 65
 
-#define GETPID 172
-#define GETCWD 17
-#define GETPPID 173
-#define GETTID 178
+	#define GETPID 172
+	#define GETCWD 17
+	#define GETPPID 173
+	#define GETTID 178
 
-#define BRK 214
-#define KILL 129
+	#define BRK 214
+	#define KILL 129
 
-#define OPEN 56 // openat in aarch64
-#define CLOSE 57
+	#define OPEN 56 // openat in aarch64
+	#define CLOSE 57
 
-#define STAT 80
+	#define STAT 80
 
-#define MMAP 222
-#define MUNMAP 215
-#define FTRUNCATE 46
+	#define MMAP 222
+	#define MUNMAP 215
+	#define FTRUNCATE 46
 
-#define FORK 220
-#define VFORK 221
-#define EXECVE 221
+	#define FORK 220
+	#define VFORK 221
+	#define EXECVE 221
 
-#define GETDENTS 78
-#define CHDIR 49
-#define MKDIR 80
-#define FCHDIR 50
+	#define GETDENTS 78
+	#define CHDIR 49
+	#define MKDIR 80
+	#define FCHDIR 50
 
-#define UNLINK 87
-#define IOCTL 16
+	#define UNLINK 87
+	#define IOCTL 16
 
-#define MQ_OPEN 277
-#define MQ_UNLINK 278
-#define MQ_SEND 281
-#define MQ_RECV 282
+	#define MQ_OPEN 277
+	#define MQ_UNLINK 278
+	#define MQ_SEND 281
+	#define MQ_RECV 282
 
-#define GETUID 144
-#define GETGID 155
+	#define GETUID 144
+	#define GETGID 155
 
-#define SHM_DESTROY 283
-
+	#define SHM_DESTROY 283
 #endif
 
 // console colors (only in supported shells)
