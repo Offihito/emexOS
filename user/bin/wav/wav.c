@@ -8,11 +8,9 @@
 #define AUDIO_DEV    "/dev/audio0"
 #define IO_BUF_SIZE  65536
 
-/* All I/O buffers are static to avoid stack corruption on short reads */
 static uint8_t  hdr_buf[256];
-static int16_t  pcm_buf[IO_BUF_SIZE / 2];  /* stereo 16-bit frames */
+static int16_t  pcm_buf[IO_BUF_SIZE / 2]; 
 
-/* read exactly n bytes into dst; returns n on success, < n on short read/error */
 static int xread(int fd, void *dst, int n)
 {
     uint8_t *p = (uint8_t *)dst;
@@ -65,7 +63,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /* ── RIFF/WAVE header ─────────────────────────────────────── */
     if (xread(src, hdr_buf, 12) < 12) {
         printf("wav: '%s' too short\n", argv[1]);
         close(src); return 1;
@@ -76,7 +73,6 @@ int main(int argc, char *argv[])
         close(src); return 1;
     }
 
-    /* ── chunk scan for fmt + data ────────────────────────────── */
     uint16_t channels = 0, bits = 0;
     uint32_t sample_rate = 0, data_size = 0;
     int found_fmt = 0, found_data = 0;
@@ -132,9 +128,8 @@ int main(int argc, char *argv[])
         close(src); return 1;
     }
 
-    /* ── stream ─────────────────────────────────────────────────── */
     uint32_t src_frame  = channels == 1 ? 2u : 4u;
-    uint32_t max_frames = (IO_BUF_SIZE / 2) / 2;  /* leave room for stereo expand */
+    uint32_t max_frames = (IO_BUF_SIZE / 2) / 2; 
     uint32_t remaining  = data_size;
     uint32_t written    = 0;
 

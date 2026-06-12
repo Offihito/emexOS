@@ -1,18 +1,6 @@
-/*
- * drivers/sound/layer.c
- *
- * Universal audio driver layer — mirrors drivers/net/layers.c
- *
- * Add new hardware drivers here.  Everything above this file
- * (kernel/devices/audio/audio0.c, userland) stays unchanged.
- */
-
 #include "layer.h"
 #include "ac97/ac97.h"
 
-/* ------------------------------------------------------------------ */
-/* Driver table                                                        */
-/* ------------------------------------------------------------------ */
 
 static audio_driver_t ac97_drv = {
     .init       = ac97_init,
@@ -23,48 +11,15 @@ static audio_driver_t ac97_drv = {
     .beep       = ac97_beep,
 };
 
-/*
- * To add another driver (e.g. Intel HDA):
- *
- *   #include "hda/hda.h"
- *
- *   static audio_driver_t hda_drv = {
- *       .init       = hda_init,
- *       .write      = hda_write,
- *       .set_rate   = hda_set_rate,
- *       .set_volume = hda_set_volume,
- *       .present    = hda_present,
- *   };
- *
- * Then add it to the probe list in audiodrv_init().
- */
-
-/* ------------------------------------------------------------------ */
-/* Active driver pointer — NULL until audiodrv_init() succeeds        */
-/* ------------------------------------------------------------------ */
-
 static audio_driver_t *active = NULL;
 
-/* ------------------------------------------------------------------ */
-/* Public API implementation                                           */
-/* ------------------------------------------------------------------ */
-
-/*
- * Probe drivers in priority order and latch the first that works.
- */
 int audiodrv_init(void)
 {
-    /* AC97 — widely supported in QEMU and real hardware */
     if (ac97_drv.init() == 0) {
         active = &ac97_drv;
         return 0;
     }
 
-    /* add further fallback drivers here, e.g.:
-     *   if (hda_drv.init() == 0) { active = &hda_drv; return 0; }
-     */
-
-    /* no supported audio hardware found */
     return -1;
 }
 

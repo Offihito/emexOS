@@ -148,7 +148,7 @@ extern void *fs_klime;
 typedef struct {
     void *data;
     u64 cap;
-    int ro;     /* 1 = read-only alias: data points into cpio image, do NOT free/copy */
+    int ro;    
 } tmpfs_data;
 
 //void tmpfs_init(void);

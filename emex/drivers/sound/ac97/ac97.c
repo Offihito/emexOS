@@ -219,14 +219,6 @@ int ac97_write(const void *buf, size_t len)
     size_t    written = 0;
 
     while (written < len) {
-        /* Wait for the hardware to move off the current write slot.
-         * We check two conditions:
-         *   - CIV != write_idx  : hardware has advanced past this slot
-         *   - SR.DCH            : DMA is halted (safe to fill any slot)
-         *
-         * Use `pause` instead of `nop` to signal a spin-wait to the CPU
-         * so it doesn't burn power and gives sibling HT threads time.
-         * Limit iterations to avoid an infinite hang if HW is wedged. */
         for (int spin = 0; spin < 2000000; spin++) {
             u8  civ = nabm_read8(AC97_NABM_PCM_OUT_CIV);
             u16 sr  = (u16)inw(dev.nabm_base + AC97_NABM_PCM_OUT_SR);
@@ -261,7 +253,6 @@ int ac97_write(const void *buf, size_t len)
     return (int)written;
 }
 
-/* 0 = full volume, 63 = near-silent; 6-bit attenuation per channel */
 void ac97_set_volume(u8 master_atten, u8 pcm_atten)
 {
     if (!dev.present)
@@ -276,7 +267,6 @@ void ac97_set_volume(u8 master_atten, u8 pcm_atten)
     nam_write(AC97_NAM_PCM_VOL,    pvol);
 }
 
-/* Returns -1 if codec lacks VRA and hz != 48000, or if codec rejects the rate */
 int ac97_set_rate(u32 hz)
 {
     if (!dev.present)
@@ -304,11 +294,6 @@ int ac97_present(void)
     return dev.present;
 }
 
-/*
- * 256-entry sine table, values in range [-32767, 32767].
- * Generated as: round(32767 * sin(2*pi*i/256)) for i in 0..255
- * Used to synthesise tones without floating-point or a math library.
- */
 static const i16 sine_table[256] = {
        0,   804,  1608,  2410,  3212,  4011,  4808,  5602,
     6393,  7179,  7962,  8739,  9512, 10278, 11039, 11793,
@@ -344,30 +329,6 @@ static const i16 sine_table[256] = {
    -6393, -5602, -4808, -4011, -3212, -2410, -1608,  -804,
 };
 
-/*
- * ac97_beep - play a pure sine tone through the AC97 DMA engine.
- *
- * freq_hz    : tone frequency in Hz (e.g. 440 = concert A, 1000 = UI beep)
- * duration_ms: how long to play, in milliseconds
- *
- * How it works
- * ------------
- * We have a 256-entry sine table that represents one full period of a sine
- * wave.  To produce frequency f at sample rate r we need to advance through
- * the table by  step = (f * 256) / r  positions per sample.
- *
- * We use a fixed-point phase accumulator (16.16 format):
- *   phase_acc += step_fp  where  step_fp = (freq_hz * 256 * 65536) / rate
- *
- * The integer part (phase_acc >> 16) & 0xFF selects the sine table entry.
- *
- * Samples are signed 16-bit stereo (L then R), so each frame = 4 bytes.
- * We fill a stack buffer (AC97_BDL_BUF_BYTES) and call ac97_write() in a
- * loop until total_samples frames have been produced.
- *
- * Amplitude is set to half of full scale (16383) to avoid clipping on
- * hardware that applies slight gain.
- */
 int ac97_beep(u32 freq_hz, u32 duration_ms)
 {
     if (!dev.present)
@@ -379,26 +340,14 @@ int ac97_beep(u32 freq_hz, u32 duration_ms)
     const u32 rate         = AC97_DEFAULT_RATE;          /* 44100 Hz        */
     const i16 amplitude    = 16383;                      /* half full-scale */
 
-    /* total stereo frames to produce */
     u32 total_frames = (rate / 1000) * duration_ms;
 
-    /*
-     * Fixed-point step: how far to advance through the 256-entry table
-     * per sample, in 16.16 fixed point.
-     *
-     *   step = freq * 256 / rate
-     *   step_fp = step * 65536 = freq * 256 * 65536 / rate
-     *
-     * Use 64-bit intermediate to avoid overflow (freq can be ~20 000).
-     */
     u64 step_fp = ((u64)freq_hz * 256u * 65536u) / rate;
 
     u32 phase_acc = 0;   /* 16.16 fixed-point phase accumulator */
 
-    /* work buffer — stereo s16, fits exactly one BDL buffer */
     i16 buf[AC97_BDL_BUF_BYTES / sizeof(i16)];
 
-    /* frames per buffer: 4096 bytes / 4 bytes-per-frame = 1024 */
     const u32 frames_per_buf = AC97_BDL_BUF_BYTES / 4;
 
     int total_written = 0;
@@ -413,13 +362,12 @@ int ac97_beep(u32 freq_hz, u32 duration_ms)
             u8  idx     = (u8)((phase_acc >> 16) & 0xFF);
             i16 sample  = (i16)(((i32)sine_table[idx] * amplitude) >> 15);
 
-            buf[i * 2 + 0] = sample; /* left  */
-            buf[i * 2 + 1] = sample; /* right */
+            buf[i * 2 + 0] = sample; 
+            buf[i * 2 + 1] = sample;
 
             phase_acc += (u32)step_fp;
         }
 
-        /* zero-pad if last chunk is short */
         if (this_frames < frames_per_buf) {
             u32 pad = (frames_per_buf - this_frames) * 2;
             for (u32 p = this_frames * 2; p < this_frames * 2 + pad; p++)

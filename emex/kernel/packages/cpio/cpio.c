@@ -203,9 +203,6 @@ int cpio_extract_to_vfs(const u8 *data, u64 size, const char *base_path)
         if (fd < 0) continue;
         fs_close(fd);
 
-        // zero-copy: point the VFS node directly at the cpio image data.
-        // This avoids copying large files (WAVs, ELFs, etc.) into the klime
-        // heap which is too small to hold them all.
         if (s->e.filesize > 0) {
             fs_node *node = fs_resolve(s->path);
             if (node && tmpfs_set_ro_data(node, s->e.data, s->e.filesize) == 0) {
