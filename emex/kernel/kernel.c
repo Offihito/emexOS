@@ -364,16 +364,13 @@ void _start(void)
         fs_create_test_file();
 
         //buf[0] = '\0'; // clear buffer so it can be used again
-
+        audiodrv_beep(1000, 200);
         if (init_boot_log >= 0) {
             fs_close(init_boot_log);
             init_boot_log = -1;
         }
 
         uci();
-
-        /* boot-complete beep — 1000 Hz for 200 ms */
-        audiodrv_beep(1000, 200);
 
         #if HARDWARE_SC == 1
             // let the cpu rest a small time

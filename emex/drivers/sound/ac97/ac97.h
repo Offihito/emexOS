@@ -19,8 +19,8 @@
 #define AC97_PCI_SUBCLASS 0x01
 
 
-#define AC9
-#define AC97_NAM_RESET          0x007_NAM_MASTER_VOL     0x02
+#define AC97_NAM_RESET          0x00
+#define AC97_NAM_MASTER_VOL     0x02
 #define AC97_NAM_HEADPHONE_VOL  0x04
 #define AC97_NAM_PCM_VOL        0x18
 #define AC97_NAM_PCM_RATE       0x2C
