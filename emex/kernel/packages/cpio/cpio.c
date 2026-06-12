@@ -198,11 +198,26 @@ int cpio_extract_to_vfs(const u8 *data, u64 size, const char *base_path)
         cpio_staged_t *s = &_staged[i];
         if (!cpio_is_file(&s->e) && !cpio_is_symlink(&s->e)) continue;
 
+        // ensure the node exists
         int fd = fs_open(s->path, O_CREAT | O_WRONLY);
         if (fd < 0) continue;
-        if (s->e.filesize > 0)
-            fs_write(fd, (void *)s->e.data, s->e.filesize);
         fs_close(fd);
+
+        // zero-copy: point the VFS node directly at the cpio image data.
+        // This avoids copying large files (WAVs, ELFs, etc.) into the klime
+        // heap which is too small to hold them all.
+        if (s->e.filesize > 0) {
+            fs_node *node = fs_resolve(s->path);
+            if (node && tmpfs_set_ro_data(node, s->e.data, s->e.filesize) == 0) {
+                total++;
+                continue;
+            }
+            // fallback: copy into tmpfs if ro-alias fails
+            fd = fs_open(s->path, O_WRONLY);
+            if (fd < 0) continue;
+            fs_write(fd, (void *)s->e.data, s->e.filesize);
+            fs_close(fd);
+        }
         total++;
     }
 

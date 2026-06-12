@@ -42,11 +42,10 @@
 #include <kernel/devices/input/kbd.h>
 #include <kernel/devices/input/mouse0.h>
 #include <kernel/devices/net/eth0.h>
+#include <drivers/sound/layer.h>
 #include <kernel/devices/vt/vt.h>
 #include <kernel/devices/random/urandom.h>
 #include <kernel/devices/random/random.h>
-
-
 // usermode stuff
 #include <kernel/user/user.h>
 // executables
@@ -346,9 +345,9 @@ void _start(void)
         module_register(&kbd_dev_module);
         module_register(&mouse0_module);
         module_register(&eth0_module);
-        //module_register(&vt_module);
         module_register(&urandom_module);
         module_register(&random_module);
+        module_register(&audio0_module);
 
         log("[MOD]", "found ", d);
         int count = module_get_count();
@@ -372,6 +371,9 @@ void _start(void)
         }
 
         uci();
+
+        /* boot-complete beep — 1000 Hz for 200 ms */
+        audiodrv_beep(1000, 200);
 
         #if HARDWARE_SC == 1
             // let the cpu rest a small time

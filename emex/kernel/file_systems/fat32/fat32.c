@@ -477,7 +477,7 @@ int fat32_read(file_t* this_file, void* buffer, size_t size)
                           (u16*)((u8*)working_buffer + i * bootSector.bytes_per_sector));
         }
 
-        uint16_t byte_to_read = (bootSector.sectors_per_cluster * bootSector.bytes_per_sector) - offset;
+        size_t byte_to_read = (bootSector.sectors_per_cluster * bootSector.bytes_per_sector) - offset;
         byte_to_read = ((byte_to_read + to_read) > size) ? (size - to_read) : byte_to_read;
 
         memcpy((u8*)buffer + to_read, (u8*)working_buffer + offset, byte_to_read);

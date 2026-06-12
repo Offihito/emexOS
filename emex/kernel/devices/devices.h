@@ -9,6 +9,7 @@
 #include <kernel/devices/random/random.h>
 #include <kernel/devices/random/urandom.h>
 #include <kernel/devices/zero/zero.h>
+#include <kernel/devices/audio/audio0.h>
 
 /*
  * version numbers probably dont get updated
@@ -54,3 +55,7 @@
 #define RNDNAME "dev_random"
 #define RNDPATH "/dev/random"
 #define RNDUNIVERSAL VERSION_NUM(0, 0, 1, 0)
+
+#define AUDIO0NAME    "dev_audio0"
+#define AUDIO0PATH    "/dev/audio0"
+#define AUDIO0UNIVERSAL VERSION_NUM(0, 1, 0, 0)
