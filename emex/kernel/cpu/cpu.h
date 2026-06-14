@@ -76,6 +76,7 @@ typedef struct {
 } cpu_info_t;
 
 void cpu_detect(void);
+void cpu_enable_sse(void);
 const char* cpu_get_vendor(void);
 const char* cpu_get_brand(void);
 cpu_info_t* cpu_get_info(void);

@@ -10,6 +10,11 @@
 #include <kernel/communication/serial.h>
 #include <kernel/arch/x86_64/exceptions/irq.h>
 
+#if ENABLE_ULIME
+#include <kernel/proc/scheduler.h>
+extern scheduler_t *scheduler;
+#endif
+
 static struct {
     u16 nam_base;
     u16 nabm_base;
@@ -38,9 +43,15 @@ static void ac97_irq_handler(cpu_state_t *state)
 
     u16 sr = (u16)inw(dev.nabm_base + AC97_NABM_PCM_OUT_SR);
 
-    /* clear buffer-completion and last-valid-buffer interrupt bits by writing 1 */
-    if (sr & (AC97_SR_BCIS | AC97_SR_LVBCI))
-        outw(dev.nabm_base + AC97_NABM_PCM_OUT_SR, sr & (AC97_SR_BCIS | AC97_SR_LVBCI));
+    if (!(sr & (AC97_SR_BCIS | AC97_SR_LVBCI)))
+        return;
+
+    outw(dev.nabm_base + AC97_NABM_PCM_OUT_SR, sr & (AC97_SR_BCIS | AC97_SR_LVBCI));
+
+#if ENABLE_ULIME
+    if (scheduler != NULL)
+        scheduler->ticks = scheduler->quantum;
+#endif
 }
 
 static int codec_cold_reset(void)
@@ -219,13 +230,11 @@ int ac97_write(const void *buf, size_t len)
     size_t    written = 0;
 
     while (written < len) {
-        for (int spin = 0; spin < 2000000; spin++) {
-            u8  civ = nabm_read8(AC97_NABM_PCM_OUT_CIV);
-            u16 sr  = (u16)inw(dev.nabm_base + AC97_NABM_PCM_OUT_SR);
-            if (civ != dev.write_idx || (sr & AC97_SR_DCH))
-                break;
-            __asm__ volatile("pause");
-        }
+        u8  civ        = nabm_read8(AC97_NABM_PCM_OUT_CIV);
+        u8  ring_slots = (u8)((dev.write_idx - civ + AC97_BDL_SIZE) % AC97_BDL_SIZE);
+
+        if (ring_slots == AC97_BDL_SIZE - 1)
+            break;
 
         size_t chunk = len - written;
         if (chunk > AC97_BDL_BUF_BYTES)
@@ -241,8 +250,8 @@ int ac97_write(const void *buf, size_t len)
 
         nabm_write8(AC97_NABM_PCM_OUT_LVI, dev.write_idx);
 
-        u8 cr = nabm_read8(AC97_NABM_PCM_OUT_CR);
-        if (!(cr & AC97_CR_RPBM))
+        u16 sr = (u16)inw(dev.nabm_base + AC97_NABM_PCM_OUT_SR);
+        if (sr & AC97_SR_DCH)
             nabm_write8(AC97_NABM_PCM_OUT_CR,
                         AC97_CR_RPBM | AC97_CR_IOCE | AC97_CR_LVBIE);
 

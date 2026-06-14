@@ -147,15 +147,27 @@ int main(int argc, char *argv[])
             mono_to_stereo(pcm_buf, frames);
 
         uint32_t out_bytes = frames * 4;
-        ssize_t  w = write(audio, pcm_buf, out_bytes);
-        if (w < 0) {
-            printf("wav: write error at %u bytes\n", written);
-            break;
+        uint32_t out_off   = 0;
+
+        while (out_off < out_bytes) {
+            ssize_t w = write(audio, (const uint8_t *)pcm_buf + out_off,
+                              out_bytes - out_off);
+            if (w < 0) {
+                printf("wav: write error at %u bytes\n", written);
+                goto done;
+            }
+            if (w == 0) {
+                /* DMA ring full — yield the CPU before retrying so we don't
+                 * burn cycles on back-to-back syscalls while the ring drains. */
+                __asm__ volatile("pause");
+            } else {
+                out_off += (uint32_t)w;
+                written += (uint32_t)w;
+            }
         }
-        written   += (uint32_t)w;
         remaining -= (uint32_t)got;
     }
-
+done:
     printf("wav: done, %u bytes written\n", written);
 
     close(audio);

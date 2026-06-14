@@ -218,6 +218,7 @@ void _start(void)
 	    cpu_detect();
         gdt_init();
         idt_init();
+        cpu_enable_sse(); 
     }
 
     bs_switch(BS2);

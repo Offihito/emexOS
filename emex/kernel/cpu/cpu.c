@@ -232,3 +232,20 @@ int cpu_has_feature(u32 feature) {
         return (cpu_info.features_edx & feature) != 0;
     } return (cpu_info.features_ecx & feature) != 0;
 }
+
+// We need it for gears without it kernel just panics with ud exception :p
+void cpu_enable_sse(void) {
+    u64 cr0, cr4;
+
+    __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
+    cr0 &= ~(1ULL << 2);  // clear EM
+    cr0 |=  (1ULL << 1);  // set MP
+    __asm__ volatile("mov %0, %%cr0" :: "r"(cr0) : "memory");
+
+    __asm__ volatile("mov %%cr4, %0" : "=r"(cr4));
+    cr4 |= (1ULL << 9);   // OSFXSR
+    cr4 |= (1ULL << 10);  // OSXMMEXCPT
+    __asm__ volatile("mov %0, %%cr4" :: "r"(cr4) : "memory");
+
+    log("[CPU]", "SSE enabled (CR4.OSFXSR + CR4.OSXMMEXCPT set)\n", d);
+}
