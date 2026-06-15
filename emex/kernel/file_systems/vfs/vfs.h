@@ -148,10 +148,12 @@ extern void *fs_klime;
 typedef struct {
     void *data;
     u64 cap;
+    int ro;    
 } tmpfs_data;
 
 //void tmpfs_init(void);
 void tmpfs_register(void);
+int  tmpfs_set_ro_data(fs_node *node, const void *ptr, u64 size);
 //void tmpfs_set_klime(void *klime);
 
 // devfs

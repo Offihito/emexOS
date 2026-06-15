@@ -295,7 +295,7 @@ u64 scall_execve(ulime_proc_t *proc, u64 path_ptr, u64 argv_ptr, u64 arg3)
         return (u64)-1;
     }
 
-    #define EXECVE_ELF_MAX (512 * 1024)
+    #define EXECVE_ELF_MAX (4 * 1024 * 1024)
     static u8 execve_elf_buf[EXECVE_ELF_MAX];
 
     ssize_t elf_size = fs_read(fd, execve_elf_buf, EXECVE_ELF_MAX);
@@ -303,6 +303,11 @@ u64 scall_execve(ulime_proc_t *proc, u64 path_ptr, u64 argv_ptr, u64 arg3)
 
     if (elf_size <= 0) {
         printf("[SYSCALL] execve: elf empty or unreadable\n");
+        return (u64)-1;
+    }
+
+    if (elf_size >= EXECVE_ELF_MAX) {
+        printf("[SYSCALL] execve: ELF too large (>= %d bytes)\n", EXECVE_ELF_MAX);
         return (u64)-1;
     }
 
@@ -369,6 +374,27 @@ u64 scall_execve(ulime_proc_t *proc, u64 path_ptr, u64 argv_ptr, u64 arg3)
                 mt->current_idx = i;
                 if (mt->tasks[i].kstack)
                     gdt_set_kernel_stack(((u64)mt->tasks[i].kstack + MT_KSTACK_SIZE) & ~0xFULL);
+
+                /* pre-populate user_ctx so the timer can switch away
+                 * and back without restarting from the entry point */
+                mt_task_t *nt = &mt->tasks[i];
+                u64 init_rsp = (new_proc->entry_rsp != 0)
+                    ? new_proc->entry_rsp
+                    : (new_proc->stack_base + new_proc->stack_size - 16) & ~0xFULL;
+                nt->user_ctx.rip    = new_proc->entry_point;
+                nt->user_ctx.rsp    = init_rsp;
+                nt->user_ctx.rflags = 0x202;
+                nt->user_ctx.cs     = (u64)(USER_CODE_SELECTOR | 3);
+                nt->user_ctx.ss     = (u64)(USER_DATA_SELECTOR | 3);
+                nt->user_ctx.cr3    = new_proc->pml4_phys;
+                nt->user_ctx.rax    = 0;
+                nt->user_ctx.rbx    = 0;
+                nt->user_ctx.rbp    = 0;
+                nt->user_ctx.r12    = 0;
+                nt->user_ctx.r13    = 0;
+                nt->user_ctx.r14    = 0;
+                nt->user_ctx.r15    = 0;
+                nt->user_ctx.saved  = 1;
                 break;
             }
         }
@@ -382,9 +408,15 @@ u64 scall_execve(ulime_proc_t *proc, u64 path_ptr, u64 argv_ptr, u64 arg3)
 u64 scall_read(ulime_proc_t *proc, u64 fd, u64 buf, u64 count)
 {
     (void)proc;
-    (void)fd;
-    (void)buf;
-    (void)count;
+
+    if (!is_valid_user_ptr_range(buf, count)) return (u64)-1;
+
+    /* stdin/stderr: no source, return 0 */
+    if (fd == 0 || fd == 2) return 0;
+
+    /* all real fds (keyboard, files, etc.) go through the VFS */
+    if (fd >= 3)
+        return (u64)fs_read((int)fd, (void *)buf, (size_t)count);
 
     return 0;
 }

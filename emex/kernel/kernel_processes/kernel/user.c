@@ -46,8 +46,6 @@ void uproc(void)
 	        u32 half_w     = fw / 2;
 	        u32 half_h     = fh / 2;
 
-			hcf();
-
 			bs_screens[BS1].visible = 1;
 			bs_screens[BS2].visible = 1;
 			bs_screens[BS3].visible = 1;

@@ -62,24 +62,14 @@ int scheduler_pick_next(scheduler_t *s, void *mt_ptr, int current_idx)
         i = (i + 1) % count;
     } while (i != start);
 
-    // second pass: if nothing ready, check if anything is just blocked
-    // but has been waiting way too long (starvation prevention)
-    // we skip this for ZOMBIE states though, dead is dead
-    for (int j = 0; j < count; j++) {
-        mt_task_t *t = &mt->tasks[j];
-        if (!t->valid || !t->proc) continue;
-        if (t->proc->state == PROC_ZOMBIE) continue;
-
-        // if its blocked but not zombie, give it a shot
-        // the syscall that blocked it might have been resolved by now
-        if (t->proc->state == PROC_BLOCKED) {
-            // only do this every STARVATION_LIMIT rounds so we dont spam
-            if (s->round_counter % SCHED_STARVATION_LIMIT == 0) {
-                return j;
-            }
-        }
-    }
-
+    /*
+     * Starvation pass intentionally skipped for BLOCKED processes.
+     * A blocked process is waiting for a specific event (child exit,
+     * I/O, etc.). Switching the CPU to it before that event fires
+     * corrupts its context and causes GP faults or wrong behaviour.
+     * The blocked→ready transition is handled explicitly in scall_exit
+     * and scall_waitpid via resume_parent_sysret.
+     */
     return -1;
 }
 

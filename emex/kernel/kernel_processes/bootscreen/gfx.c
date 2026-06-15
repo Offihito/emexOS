@@ -150,7 +150,6 @@ void loading_screen(void)
 
     bs_screens[BS4].cursor_x = box_x + 20;
     bs_screens[BS4].cursor_y = text_y + 20;
-
     print_to(
         BS4,
         "Loading emexOS...",

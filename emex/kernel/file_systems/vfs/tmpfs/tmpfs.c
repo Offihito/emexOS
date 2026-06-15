@@ -43,14 +43,28 @@ static ssize_t tmpfs_write(fs_file *file, const void *buf, size_t cnt) {
         data = (tmpfs_data*)klime_create((klime_t*)fs_klime, sizeof(tmpfs_data));
         if (!data) return -1;
         data->data = NULL;
-        data->cap = 0;
+        data->cap  = 0;
+        data->ro   = 0;
         node->priv = data;
+    }
+
+    // promote read-only alias to writable copy on first write
+    if (data->ro) {
+        u64 old_size = node->size;
+        u64 new_cap  = (old_size + cnt + 4095) & ~(u64)4095;
+        void *copy   = klime_create((klime_t*)fs_klime, new_cap);
+        if (!copy) return -1;
+        if (data->data && old_size > 0)
+            memcpy(copy, data->data, old_size);
+        data->data = copy;
+        data->cap  = new_cap;
+        data->ro   = 0;
     }
 
     // expand if needed
     u64 needed = file->pos + cnt;
     if (needed > data->cap) {
-        u64 new_cap = (needed + 4095) & ~4095; // round to 4KB
+        u64 new_cap = (needed + 4095) & ~(u64)4095;
 
         void *new_data = klime_create((klime_t*)fs_klime, new_cap);
         if (!new_data) return -1;
@@ -62,7 +76,7 @@ static ssize_t tmpfs_write(fs_file *file, const void *buf, size_t cnt) {
         }
 
         data->data = new_data;
-        data->cap = new_cap;
+        data->cap  = new_cap;
     }
 
     memcpy((u8*)data->data + file->pos, buf, cnt);
@@ -164,6 +178,30 @@ static fs_type tmpfs = {
     .mount = tmpfs_mount,
     .ops = &tmpfs_ops,
 };
+
+/*
+ * Zero-copy loader: wire a VFS node directly to an existing read-only
+ * memory region (e.g. the cpio image still mapped by Limine).  No heap
+ * allocation is made for the file data itself.
+ */
+int tmpfs_set_ro_data(fs_node *node, const void *ptr, u64 size)
+{
+    if (!node || !ptr) return -1;
+
+    tmpfs_data *data = (tmpfs_data*)node->priv;
+    if (!data) {
+        data = (tmpfs_data*)klime_create((klime_t*)fs_klime, sizeof(tmpfs_data));
+        if (!data) return -1;
+        node->priv = data;
+    }
+
+    data->data = (void *)ptr;
+    data->cap  = size;
+    data->ro   = 1;
+    node->size = size;
+
+    return 0;
+}
 
 // register tmpfs type directly
 void tmpfs_register(void) {

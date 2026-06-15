@@ -111,6 +111,7 @@ $(ISO): limine.conf $(LIMINE_TOOL) buildgen $(BUILD_DIR)/kernel.elf disk userspa
 	@cp $(USERSPACE_DIR)/bin/ps/ps.elf $(DISK_DIR)/rd/bin/
 	@cp $(USERSPACE_DIR)/bin/meminfo/meminfo.elf $(DISK_DIR)/rd/bin/
 	@cp $(USERSPACE_DIR)/bin/dofetch/dofetch.elf $(DISK_DIR)/rd/bin/
+	@cp $(USERSPACE_DIR)/bin/wav/wav.elf $(DISK_DIR)/rd/bin/
 
 # libs arent copied anymore due merge conflicts in prs
 #@echo "[MK] copying libs..."
@@ -144,6 +145,7 @@ run: $(ISO)
 		-m 2048 \
 		-netdev user,id=net0 \
 		-device e1000,netdev=net0 \
+		-device AC97 \
 		-drive if=pflash,format=raw,readonly=on,file=include/uefi/OVMF_CODE.fd \
 		-drive if=pflash,format=raw,file=include/uefi/OVMF_VARS.fd \
 		-drive file=$(DISK_IMG),format=raw,if=ide,index=0 \
